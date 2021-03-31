@@ -1,0 +1,6 @@
+select id, company, salary
+from employee e
+where 1 >= abs((select count(*) from employee e1 where e.company=e1.company and e.salary >= e1.salary) -
+(select count(*) from employee e2 where e.company=e2.company and e.salary < e2.salary) )
+group by company, salary
+;
