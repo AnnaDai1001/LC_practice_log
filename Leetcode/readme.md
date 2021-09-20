@@ -1,4 +1,5 @@
 > A post with all the LC database questions: https://zhuanlan.zhihu.com/p/265247944
+
 > A post summarized the test points: https://www.1point3acres.com/bbs/thread-706788-1-1.html (below are my notes from it)
 
 - [x] rank, dense_rank:
