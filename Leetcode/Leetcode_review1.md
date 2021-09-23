@@ -49,6 +49,27 @@ limit 1 offset 1)
 
 Write a SQL query to get the nth highest salary from the Employee table. For example, given the above Employee table, the nth highest salary where n= 2 is 200. If there is no nth highest salary, then the query should return null.
 ```
-create function
+create function getnthhighest(n int) returns int
+begin
+declare p int;
+set p = n - 1;
+ return (
+   select * from
+   (select distinct salary 
+   from employee 
+   order by salary desc 
+   limit 1 offset p) as nthhighest
+ )
+;
+end
 
+```
+
+**[178. Rank Scores](https://zhuanlan.zhihu.com/p/250429998)** 
+> Scores: Id(Primary key) | Score
+
+Write a SQL query to rank scores. If there is a tie between two scores, both should have the same ranking. Note that after a tie, the next ranking number should be the next consecutive integer value. In other words, there should be no "holes" between ranks.
+```
+select score, dense_rank() over(order by score desc) as 'Rank'
+from scores;
 ```
