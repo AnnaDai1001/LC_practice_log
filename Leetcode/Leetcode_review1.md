@@ -73,3 +73,62 @@ Write a SQL query to rank scores. If there is a tie between two scores, both sho
 select score, dense_rank() over(order by score desc) as 'Rank'
 from scores;
 ```
+
+**[180. Consecutive Numbers](https://zhuanlan.zhihu.com/p/250442363)** 
+> logs: Id(Primary key) | Num
+
+Write a SQL query to find all numbers that appear at least three times consecutively. For example, given the above Logs table, 1 is the only number that appears consecutively for at least three times.
+```
+# method 1 - using lead()
+select distinct num
+from (select num, lead(num,1) over(order by id) as next1, lead(num, 2) over(order by id) as next2 from logs) temp
+where num = next1 and num = next2
+;
+
+# method 2 -  sub query
+select distinct l1.num
+from logs l1
+where (id+1) in (select num from logs l2 where l2.num = l1.num)
+and (id+2) in (select num from logs l2 where l2.num = l1.num)
+
+select distinct l1.num
+from logs l1
+join logs l2 on l1.id + 1 = l2.id
+join logs l3 on l1.id + 2 = l3.id
+where l1.num = l2.num and l2.num = l3.num
+;
+```
+
+**[181. Employees Earning More Than Their Managers](https://zhuanlan.zhihu.com/p/250453101)** 
+> Employee: Id(Primary key) | name | salary | managerid
+
+The Employee table holds all employees including their managers. Every employee has an Id, and there is also a column for the manager Id.
+
+Given the Employee table, write a SQL query that finds out employees who earn more than their managers. For the above table, Joe is the only employee who earns more than his manager.
+```
+select e.name as **'Employee'**
+from employee e left join employee m
+on e.managerid = m.id
+where m.salary < e.salary
+;
+```
+
+**[182. Duplicate Emails](https://zhuanlan.zhihu.com/p/251960784)** 
+> Person: Id(Primary key) | email
+
+Write a SQL query to find all duplicate emails in a table named Person. For example, your query should return the following for the above table:
+```
+select email # ! no need for distinct, redundant for group by
+from person
+group by 1
+having count(*) > 1
+;
+
+# self join
+select distinct a.email
+from person a join person b
+on a.email = b.email and a.id <> b.id
+;
+```
+
+
