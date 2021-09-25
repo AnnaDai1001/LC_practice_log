@@ -131,4 +131,62 @@ on a.email = b.email and a.id <> b.id
 ;
 ```
 
+**[183. Customers Who Never Order](https://zhuanlan.zhihu.com/p/251983949)** 
+> Customers: Id(Primary key) | Name
+
+> Orders: Id(Primary key) | CustomerId
+
+Write a SQL query to find all customers who never order anything. Using the above tables as an example, return the following:
+```
+select name as 'customers'
+from Customers
+where id not in (select customerid from orders)
+;
+
+# left join
+select name
+from customers c
+left join orders o
+on c.id = o.customerid
+where o.id is null
+;
+```
+
+**[184. Department Highest Salary](https://zhuanlan.zhihu.com/p/251983949)** 
+> Employee: Id(Primary key) | Name | Salary |DepartmentId
+
+> Department: Id(Primary key) | Name
+
+Write a SQL query to find employees who have the highest salary in each of the departments. For the above tables, your SQL query should return the following rows (order of rows does not matter).
+```
+# find max salary by department ; join back to the original table and department table
+# if we want all the department even those without any employee; 
+select d.name as department, e.name as employee, e.salary
+from department d
+left join employee on d.id = e.departmentid
+inner join
+(select departmentid, max(salary) as m_salary
+from employee
+group by 1) m
+on d.id = m.departmentid and e.salary = t.m_salary
+;
+
+# use CTE and join
+```
+
+**[185. Department Top Three Salaries](https://zhuanlan.zhihu.com/p/252197890)** 
+> Employee: Id(Primary key) | Name | Salary |DepartmentId
+
+> Department: Id(Primary key) | Name
+
+Write a SQL query to find employees who earn the top three salaries in each of the department. For the above tables, your SQL query should return the following rows (order of rows does not matter).
+```
+# get rank of salary within group ; find the ones with rk <= 3
+
+select d.name as department, e.name as employee, e.salary
+from department d
+left join (select name, salary, row_number() over(partition by departmentid order by salary desc) as rk, departmentid
+from employee) e
+on d.id = e.departmentid
+where e.rk <= 3;
 
