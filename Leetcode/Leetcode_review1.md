@@ -189,4 +189,66 @@ left join (select name, salary, row_number() over(partition by departmentid orde
 from employee) e
 on d.id = e.departmentid
 where e.rk <= 3;
+```
 
+
+**[196. Delete Duplicate Emails](https://zhuanlan.zhihu.com/p/252243481)** 
+> Person: Id(Primary key) | Email
+
+Write a SQL query to delete all duplicate email entries in a table named Person, keeping only unique emails based on its smallest Id. For example, after running your query, the above Person table should have the following rows
+```
+# Wrong method!!! Can't directly do this
+delete from person
+where id not in (select min(id) from person group by email)
+;
+
+# Correct method
+delete from person
+where id not in (select mid from (select min(id) as mid from person group by email) as tmp)
+;
+
+delete p1 from person p1, person p2
+where p1.email = p2.email and p1.id > p2.id
+;
+```
+
+
+**[197. Rising Temperature](https://zhuanlan.zhihu.com/p/252403796)** 
+> weather: id(Primary key) | RecordDate | temperature
+
+Write an SQL query to find all dates' id with higher temperature compared to its previous dates (yesterday). Return the result table in any order.
+```
+# method 1: window function - not correct to use lag() only since not working for non-consecutive days
+# each table need to have an alias
+select id
+from ( select id, recorddate, temperature - lag(temperature, 1) over(order by recorddate) as temp_diff,
+datediff(recorddate, lag(recorddate, 1) over(order by recorddate)) as date_diff
+from weather) tmp
+where temp_diff > 0 and date_diff = 1
+;
+
+# method 2: join
+select curr.id
+from weather curr join weather prev
+on datediff(curr.recorddate, prev.recorddate) = 1 and curr.temperature > prev.temperature
+;
+```
+
+
+**[262. Trips and Users](https://zhuanlan.zhihu.com/p/252454836)** 
+> trips: id(Primary key) | client_id | driver_id | city_id | status | request_at
+
+> users: userid(Primary key) | banned | role
+
+Write a SQL query to find the cancellation rate of requests made by unbanned users (both client and driver must be unbanned) between Oct 1, 2013 and Oct 3, 2013. The cancellation rate is computed by dividing the number of canceled (by client or driver) requests made by unbanned users by the total number of requests made by unbanned users.
+```
+select request_at as day, round(
+    count(distinct case when status like "cancelled%" then id else null end) / count(distinct id)
+    , 2) as 'Cancellation Rate'
+from trips
+where client_id not in (select users_id from users where banned = 'Yes')
+and driver_id not in (select users_id from users where banned = 'Yes')
+and request_at between '2013-10-01' and '2013-10-03'
+group by 1
+;
+```
