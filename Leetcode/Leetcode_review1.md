@@ -252,3 +252,50 @@ and request_at between '2013-10-01' and '2013-10-03'
 group by 1
 ;
 ```
+
+**[511. Game Play Analysis I](https://zhuanlan.zhihu.com/p/254355214)** 
+> activity: player_id(Primary key) | device_id | event_date | games_played
+
+Write an SQL query that reports the first login date for each player.
+```
+select player_id, min(event_date) as first_login
+from activity
+group by 1
+order by 1
+;
+```
+
+**[512. Game Play Analysis II](https://zhuanlan.zhihu.com/p/254370126)** 
+> activity: player_id(Primary key) | device_id | event_date | games_played
+
+Write a SQL query that reports the device that is first logged in for each player.
+```
+#window function
+
+select player_id, device_id
+from (select player_id, device_id, row_number() over(partition by player_id order by event_date) as rown from activity) tmp
+where rown = 1
+;
+
+select a1.player_id, a1.device_id
+from activity a1 join (select player_id, min(event_date) as first_login
+from activity
+group by 1) t on a1.player_id = t.player_id and a1.event_date = t.first_login
+order by 1
+;
+```
+
+**[534. Game Play Analysis III](https://zhuanlan.zhihu.com/p/254412551)** 
+> activity: player_id(Primary key) | device_id | event_date | games_played
+
+Write an SQL query that reports for each player and date, how many games played so far by the player. That is, the total number of games played by the player until that date. Check the example for clarity.
+```
+#window function
+select player_id, event_date, sum(games_played) over(partition by player_id order by event_date) as games_played_so_far
+from activity
+order by 1, 2
+;
+
+# the author gave other method using related join, but I can not understand
+```
+
