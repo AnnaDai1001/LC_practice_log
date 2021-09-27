@@ -299,3 +299,53 @@ order by 1, 2
 # the author gave other method using related join, but I can not understand
 ```
 
+**[550. Game Play Analysis IV](https://zhuanlan.zhihu.com/p/254592333)** 
+> activity: player_id(Primary key) | device_id | event_date | games_played
+
+Write an SQL query that reports the fraction of players that logged in again on the day after the day they first logged in, rounded to 2 decimal places. In other words, you need to count the number of players that logged in for at least two consecutive days starting from their first login date, then divide that number by the total number of players.
+```
+# use left join
+select round( count(distinct future.player_id) / count(distinct first.player_id), 2) as fraction
+from (select player_id, min(event_date) as first_login # can also be derived using window function first_value()
+      from activity
+      group by 1) first
+left join activity future on first.player_id = future.player_id on datediff(future.event_date, first.event_date) = 1
+```
+
+**[569. Median Employee Salary](https://zhuanlan.zhihu.com/p/257081415)** 
+
+The Employee Table holds all employees. The employee table has three columns: Employee Id, Company Name, and Salary.
+
+> employee: id(Primary key) | company | salary
+
+Write a SQL query to find the median salary of each company. Bonus points if you can solve it without using any built-in SQL functions.
+```
+select id, company, salary
+from
+    (select id, company, salary,
+    row_number() over(partition by company order by salary) as sal_rk
+    count() over(partition by company) as cnt
+    from employee
+    ) tmp
+where (round(cnt/2)=sal_rk or round((cnt+1)/2)=sal_rk)
+;
+
+```
+
+**[570. Managers with at Least 5 Direct Reports](https://zhuanlan.zhihu.com/p/257085286)** 
+
+The Employee Table holds all employees. The employee table has three columns: Employee Id, Company Name, and Salary.
+
+> employee: id(Primary key) | name | department | managerid
+
+Given the Employee table, write a SQL query that finds out managers with at least 5 direct report. 
+```
+select e0.name 
+from employee e0 join 
+(select managerid
+from employee
+group by 1
+having count(distinct id) >= 5) tmp on e0.id = tmp.managerid
+;
+
+```
