@@ -349,3 +349,44 @@ having count(distinct id) >= 5) tmp on e0.id = tmp.managerid
 ;
 
 ```
+
+**[571. Find Median Given Frequency of Numbers](https://zhuanlan.zhihu.com/p/257945802)** 
+
+The Numbers table keeps the value of number and its frequency.
+
+> numbers: number | frequency
+
+Write a query to find the median of all numbers and name the result as median. In this table, the numbers are 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 3, so the median is (0 + 0)/2 = 0.
+
+```
+select avg(number) as median
+from
+(select *, 
+       sum(frequency) over(order by number) as rolling_cnt,
+       (sum(frequency) over())/2.0 as mid
+from numbers) as tmp
+where mid between rolling_cnt - frequency and rolling_cnt
+
+```
+
+**[574. Winning Candidate](https://zhuanlan.zhihu.com/p/258311949)** 
+
+> candidate: id | name
+
+> vote: id | candidateid
+
+Write a sql to find the name of the winning candidate, the above example will return the winner B.
+
+Notes: You may assume there is no tie, in other words there will be only one winning candidate.
+
+```
+select c.name
+from candidate c join
+(select candidateid #, count(*) as votes
+from vote
+group by 1
+order by count(*) desc
+limit 1) as tmp 
+on c.id = tmp.candidateid
+
+```
