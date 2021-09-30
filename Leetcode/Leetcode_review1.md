@@ -390,3 +390,67 @@ limit 1) as tmp
 on c.id = tmp.candidateid
 
 ```
+
+**[577. Employee Bonus](https://zhuanlan.zhihu.com/p/258318063)** 
+
+> employee: empid | name | manager | salary
+
+> bonus: empid | bonus
+
+Select all employee's name and bonus whose bonus is < 1000.
+
+```
+select e.name, b.bonus
+from employee e left join bonus b on e.empid = b.empid
+where b.bonus is null or b.bonus < 1000
+;
+
+# or use id not in empid with bonus >= 1000
+
+```
+
+**[578. Get Highest Answer Rate Question](https://zhuanlan.zhihu.com/p/258327104)** 
+
+> surveylog: id | action | question_id | answer_id | q_num | timestamp
+
+d means user id; action has these kind of values: "show", "answer", "skip"; answer_id is not null when action column is "answer", while is null for "show" and "skip"; q_num is the numeral order of the question in current session.
+
+Write a sql query to identify the question which has the highest answer rate.
+
+Note:The highest answer rate meaning is: answer number's ratio in show number in the same question.
+
+```
+
+select question_id as 'surveylog'
+from surveylog
+group by 1
+order by sum(ifelse(action = 'answer', 1, 0)) / sum(ifelse(action = 'show', 1, 0)) desc ### order by can be followed by aggregate function
+limit 1
+
+```
+
+**[579. Find Cumulative Salary of an Employee(Hard)](https://zhuanlan.zhihu.com/p/258684985)** 
+
+> employee: id | month | salary
+
+Write a SQL to get the cumulative sum of an employee's salary over a period of 3 months but exclude the most recent month.
+
+The result should be displayed by 'Id' ascending, and then by 'Month' descending.
+
+```
+select e1.id, e1.month, ifnull(e1.salary, 0) + ifnull(e2.salary, 0) + ifnull(e3.salary, 0) as salary
+from
+(select id, max(month) as max_month
+from employee
+group by 1
+having count(*) > 1
+) maxmonth
+left join
+employee e1 on maxmonth.id = e1.id and maxmonth.max_month > e1.month
+left join
+employee e2 on e2.id = e1.id and e2.month = e1.month - 1
+left join
+employee e3 on e3.id = e1.id and e3.month = e1.month - 2
+order by 1 asc, 2 desc
+;
+```
