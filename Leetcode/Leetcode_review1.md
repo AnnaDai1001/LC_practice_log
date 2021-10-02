@@ -454,3 +454,148 @@ employee e3 on e3.id = e1.id and e3.month = e1.month - 2
 order by 1 asc, 2 desc
 ;
 ```
+
+**[580. Count Student Number in Departments](https://zhuanlan.zhihu.com/p/258693620)** 
+
+> student: student_id | student_name | gender | dept_id
+
+> department: dept_id | dept_name
+
+Write a query to print the respective department name and number of students majoring in each department for all departments in the department table (even ones with no current students).
+
+Sort your results by descending number of students; if two or more departments have the same number of students, then sort those departments alphabetically by department name.
+
+```
+select d.dept_name, ifnull(count(distinct s.student_id), 0) as student_name
+from department d left join student s
+on d.dept_id = s.dept_id
+group by 1
+order by 2 desc, 1 asc
+;
+```
+
+**[584. Find Customer Referee](https://zhuanlan.zhihu.com/p/258694894)** 
+
+> customer: id | name | referee_id
+
+Write a SQL to get the cumulative sum of an employee's salary over a period of 3 months but exclude the most recent month.
+
+The result should be displayed by 'Id' ascending, and then by 'Month' descending.
+
+```
+# method 1, add null in where condition
+select name
+from customer
+where referee_id <> 2 or referee_id is null
+;
+
+# method2: exclusion method
+select name
+from customer
+where id not in (select id from customer where referee_id = 2);
+
+# method3: use function
+select name
+from customer
+where ifnull(referee_id, 0) <> 2 # ifnull can also be replaced with coalesce()
+;
+```
+
+
+**[585. Investments in 2016](https://zhuanlan.zhihu.com/p/258697688)** 
+
+> insurance: pid | tiv_2015 | tiv_2016 | lat | lon
+
+Write a query to print the sum of all total investment values in 2016 (TIV_2016), to a scale of 2 decimal places, for all policy holders who meet the following criteria:
+
+Have the same TIV_2015 value as one or more other policyholders.
+Are not located in the same city as any other policyholder (i.e.: the (latitude, longitude) attribute pairs must be unique).
+
+```
+select sum(tiv_2016)
+from insurance
+where tiv_2015 in (select tiv_2015 from insurance group by 1 having count(*) > 1) and
+concat(lat, ",", lon) in (select concat(lat, ",", lon) from insurance group by lat, lon having count(*) = 1)
+# or (lat, lon) in (select lat, lon from insurance group by lat, lon having count(*) = 1)
+;
+```
+
+**[586. Customer Placing the Largest Number of Orders](https://zhuanlan.zhihu.com/p/258700620)** 
+
+> orders: order_number | customer_number | order_date | required_date | shipped_date | status | comment
+
+Query the customer_number from the orders table for the customer who has placed the largest number of orders.
+
+It is guaranteed that exactly one customer will have placed more orders than any other customer.
+```
+select customer_number
+from orders
+group by 1
+order by count(distinct order_number) desc
+limit 1
+;
+
+# use of all() function
+select customer_number
+from orders
+group by 1
+having count(distinct order_number) >= all(select count(distinct order_number) from orders group by customer_number)
+;
+```
+
+**[595. Big Countries](https://zhuanlan.zhihu.com/p/258703364)** 
+
+> world: name | continent | area | population | gdp
+
+A country is big if it has an area of bigger than 3 million square km or a population of more than 25 million.
+
+Write a SQL solution to output big countries' name, population and area.
+
+For example, according to the above table, we should output:
+
+```
+select name, population, area
+from world
+where area > 3000000 or population > 25000000
+;
+```
+
+**[596. Classes More than 5 Students](https://zhuanlan.zhihu.com/p/258705251)** 
+
+> courses: student | class
+
+Please list out all classes which have more than or equal to 5 students.
+
+Note: The students should not be counted duplicate in each course.
+
+```
+select class
+from courses
+group by 1
+having count(distinct student) >= 5
+;
+```
+
+**[597. Friend Requests I: Overall Acceptance Rate](https://zhuanlan.zhihu.com/p/258790804)** 
+
+> friend_request: sender_id | send_to_id | request_date
+
+> request_accepted: requester_id | accepter_id | accept_date
+
+Write a query to find the overall acceptance rate of requests rounded to 2 decimals, which is the number of acceptance divides the number of requests.
+
+Note:
+
+The accepted requests are not necessarily from the table friend_request. In this case, you just need to simply count the total accepted requests (no matter whether they are in the original requests), and divide it by the number of requests to get the acceptance rate.
+It is possible that a sender sends multiple requests to the same receiver, and a request could be accepted more than once. In this case, the ‘duplicated’ requests or acceptances are only counted once.
+If there is no requests at all, you should return 0.00 as the accept_rate.
+
+```
+select round(
+             ifnull(
+                    (select count(distinct requester_id, accepter_id) from request_accepted)/
+                       (select count(distinct sender_id, send_to_id) from friend_request), 
+                    0), 
+             2) as accept_rate
+;
+```
