@@ -599,3 +599,219 @@ select round(
              2) as accept_rate
 ;
 ```
+
+**[601. Human Traffic of Stadium](https://zhuanlan.zhihu.com/p/259149233)** 
+
+X city built a new stadium, each day many people visit it and the stats are saved as these columns: id, visit_date, people
+
+> stadium: id | visit_date | people
+
+Please write a query to display the records which have 3 or more consecutive rows and the amount of people more than 100(inclusive).
+**all of those three or more rows should be present**
+
+Note: Each day only have one row record, and the dates are increasing with id increasing.
+
+```
+# subqueries - wrong method below!!!
+with over100 as(
+select id from stadium where people >= 100
+)
+
+select *
+from stadium
+where people >= 100 and
+(
+(id-2 in over100 and id-1 in over100) or
+(id-1 in over100 and id+1 in over100) or
+(id+1 in over100 and id+2 in over100)
+)
+;
+# subqueries - correction!!
+select *
+from stadium
+where people >= 100 and
+(
+((id-2) in (select id from stadium where people >= 100) and (id-1) in (select id from stadium where people >= 100)) or
+((id-1) in (select id from stadium where people >= 100) and (id+1) in (select id from stadium where people >= 100)) or
+((id+1) in (select id from stadium where people >= 100) and (id+2) in (select id from stadium where people >= 100))
+)
+;
+
+# solution from the zhihu
+with tmp as(
+select a.id as id1, b.id as id2, c.id as id3
+from stadium a join stadium b on b.id = a.id + 1
+join stadium c on c.id = a.id + 2
+where a.people >= 100 and b.people >= 100 and c.people >= 100
+),
+tmp2 as (
+select id1 as id from tmp
+union
+select id2 as id from tmp
+union
+select id3 as id from tmp
+)
+
+select *
+from stadium
+where id in (select id from tmp2)
+;
+
+```
+
+**[602. Friend Requests II: Who Has the Most Friends](https://zhuanlan.zhihu.com/p/259261538)** 
+
+In social network like Facebook or Twitter, people send friend requests and accept others' requests as well.
+
+> request_accepted: requester_id | accepter_id | accept_date
+
+Write a query to find the the people who has most friends and the most friends number under the following rules:
+
+* It is guaranteed there is only 1 people having the most friends.
+* The friend request could only been accepted once, which mean there is no multiple records with the same requester_id and accepter_id value.
+
+```
+# from zhihu
+select c.people as id, sum(c.cnt) as num
+from (
+select requester_id as people, count(distinct accepter_id) as cnt from request_accepted group by 1
+union all
+select accepter_id as people, count(distinct requester_id) as cnt from request_accepted group by 1
+) c
+group by 1
+order by sum(c.cnt) desc
+limit 1
+;
+
+# 
+select user1 as id, count(distinct user2) as num
+from (
+select requester_id as user1, accepter_id as user2 from request_accepted
+union all
+select accepter_id as user1, requester_id as user2 from request_accepted
+)
+group by 1
+order by count(distinct user2) desc
+limit 1;
+```
+
+**[603. Consecutive Available Seats](https://zhuanlan.zhihu.com/p/259420594)** 
+
+Several friends at a cinema ticket office would like to reserve consecutive available seats.
+
+> cinema: seat_id | free
+
+Can you help to query all the consecutive available seats order by the seat_id using the following cinema table?
+
+* The seat_id is an auto increment int, and free is bool ('1' means free, and '0' means occupied.).
+* Consecutive available seats are more than 2(inclusive) seats consecutively available.
+
+```
+# method: similar to that of the stadium traffic question - wrong!!! just need two consecutive
+select seat_id from cinema
+where free = 1 and
+(
+((seat_id-2) in (select seat_id from cinema where free = 1) and (seat_id-1) in (select seat_id from cinema where free = 1)) or
+((seat_id-1) in (select seat_id from cinema where free = 1) and (seat_id+1) in (select seat_id from cinema where free = 1)) or
+((seat_id+1) in (select seat_id from cinema where free = 1) and (seat_id+2) in (select seat_id from cinema where free = 1))
+)
+;
+
+# correct version:
+select seat_id from cinema
+where free = 1 and
+(
+((seat_id-1) in (select seat_id from cinema where free = 1)) or
+((seat_id+1) in (select seat_id from cinema where free = 1))
+)
+;
+
+# use join
+select distinct a.seat_id
+from cinema a
+join cinema b on abs(a.seat_id - b.seat_id) = 1 and a.free = 1 and b.free = 1
+order by 1
+;
+```
+
+**[607. Sales Person](https://zhuanlan.zhihu.com/p/259424830)** 
+The table salesperson holds the salesperson information. Every salesperson has a sales_id and a name.
+
+> salesperson: sales_id | name | salary | commission_rate | hire_date
+
+The table company holds the company information. Every company has a com_id and a name.
+
+> company: com_id | name | city
+
+> orders: order_id | order_date | com_id | sales_id | amount
+
+Output all the names in the table salesperson, who didn’t have sales to company 'RED'.
+
+```
+select s.name
+from salesperson s
+where sales_id not in
+(select o.sales_id
+from orders o join company c on o.com_id = c.com_id
+where c.name = 'Red'
+)
+;
+```
+
+
+**[608. Tree Node](https://zhuanlan.zhihu.com/p/259431458)** 
+
+Given a table tree, id is identifier of the tree node and p_id is its parent node's id.
+
+> tree: id | p_id
+
+Each node in the tree can be one of three types:
+
+* Leaf: if the node is a leaf node.
+* Root: if the node is the root of the tree.
+* Inner: If the node is neither a leaf node nor a root node.
+
+Write a query to print the node id and the type of the node. Sort your output by the node id. The result for the above sample is:
+
+```
+select id, 
+case when p_id is null then 'Root'
+when id not in (select distinct p_id from tree where p_id is not null) then 'Leaf'
+else 'Inner' end as type
+from tree
+;
+```
+
+
+
+**[610. Triangle Judgement](https://zhuanlan.zhihu.com/p/259435481)** 
+
+A pupil Tim gets homework to identify whether three line segments could possibly form a triangle.
+
+However, this assignment is very heavy because there are hundreds of records to calculate.
+
+> triangle: x | y | z
+
+return table: x | y | z | triangle (yes/no)
+
+```
+select *,
+case when abs(x-y) < z and abs(y-z) < x and abs(x-z) < y then 'yes' else 'no' end as 'triangle' # or: x+y>z and x+z>y and y+z>x
+from triangle
+;
+```
+
+**[612. Shortest Distance in a Plane](https://zhuanlan.zhihu.com/p/259469156)** 
+
+Table point_2d holds the coordinates (x,y) of some unique points (more than two) in a plane.
+
+> point_2d: x | y
+
+The shortest distance is 1.00 from point (-1,-1) to (-1,2).
+
+```
+select round(min(pow(pow(a.x-b.x, 2)+pow(a.y-b.y, 2), 0.5)), 2) as shortest
+from point_2d a join point_2d b
+on a.x <> b.x or a.y <> b.y
+;
+```
