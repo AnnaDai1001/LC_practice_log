@@ -815,3 +815,35 @@ from point_2d a join point_2d b
 on a.x <> b.x or a.y <> b.y
 ;
 ```
+
+
+**[613. Shortest Distance in a Line](https://zhuanlan.zhihu.com/p/259473185)** 
+
+Table point holds the x coordinate of some points on x-axis in a plane, which are all integers.
+
+> point: x
+
+Write a query to find the shortest distance between two points in these points.
+
+```
+select min(abs(a.x - b.x) as shortest
+from point a join point b
+on a.x <> b.x
+;
+```
+
+**[614. Second Degree Follower](https://zhuanlan.zhihu.com/p/259487082)** 
+
+> follow: followee | follower
+
+Please write a SQL query to get the amount of each follower’s follower if he/she has one.
+
+```
+# use join
+select a.follower, count(distinct b.follower) as num
+from follow a join follow b
+on a.follower = b.followee
+group by a.follower
+order by a.follower
+;
+```
