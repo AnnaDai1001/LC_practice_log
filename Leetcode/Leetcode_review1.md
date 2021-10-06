@@ -847,3 +847,123 @@ group by a.follower
 order by a.follower
 ;
 ```
+
+
+**[615. Average Salary: Departments VS Company](https://zhuanlan.zhihu.com/p/259703120)** 
+
+> salary: id | employee_id | amount | pay_date
+
+> employee: employee_id | department_id
+
+write a query to display the comparison result (higher/lower/same) of the average salary of employees in a department to the company's average salary.
+
+```
+#关联子查询
+select pay_month, department_id,
+case when dept_avg > com_avg then "higher"
+when when dept_avg < com_avg then "lower"
+else "same" end as comparison
+from 
+(
+select left(a.pay_date, 7) as pay_month, b.department_id,
+avg(amount) as dept_avg,
+( select avg(amount) from salary x where left(a.pay_date, 7) = left(x.pay_date, 7) group by left(x.pay_date, 7) ) as com_avg
+from salary a
+join employee b
+on a.employee_id = b.employee_id
+group by 1, 2
+order by 1 desc
+) tmp
+
+#联结
+select d_avg.pay_month, d_avg.department_id,
+case when d_avg.dept_avg > c_avg.com_avg then "higher"
+when d_avg.dept_avg < c_avg.com_avg then "lower"
+else "same" end as comparison
+from
+(select date_format(s.pay_date, "%Y-m") as pay_month,
+e.department_id, avg(s.amount) as dept_avg
+from salary s join employee e on s.employee_id = e.employee_id
+group by 1, 2) as d_avg
+left join 
+(select date_format(s.pay_date, "%Y-m") as pay_month, avg(amount) as com_avg
+from salary
+grou by 1) as c_avg
+on d_avg.pay_month = c_avg.pay_month
+;
+;
+```
+
+
+**[618. Students Report By Geography](https://zhuanlan.zhihu.com/p/259705774)** 
+
+A U.S graduate school has students from Asia, Europe and America. The students' location information are stored in table student as below.
+
+> student: name | continent
+
+Pivot the continent column in this table so that each name is sorted alphabetically and displayed underneath its corresponding continent. The output headers should be America, Asia and Europe respectively. It is guaranteed that the student number from America is no less than either Asia or Europe.
+
+```
+# method 1
+with cte as
+(
+select 
+case when continent = “America" then name else null end as America,
+case when continent = “Asia" then name else null end as Asia,
+case when continent = “Europe" then name else null end as Europe,
+row_number() over(partition by continent order by name) as rk
+from student
+)
+
+select max(America) as America,
+max(Asia) as Asia,
+max(Europe) as Europe
+from cte
+group by rk
+;
+
+#method 2
+select
+max(case when continent = “America" then name else null end) as America,
+max(case when continent = “Asia" then name else null end) as Asia,
+max(case when continent = “Europe" then name else null end) as Europe
+from
+(
+select *,
+row_number() over(partition by continent order by name) as rk
+from student
+) tmp
+group by rk
+;
+```
+
+**[619. Biggest Single Number](https://zhuanlan.zhihu.com/p/259712484)** 
+
+> my_numbers: num
+
+Can you write a SQL query to find the biggest number, which only appears once.
+
+Note: If there is no such number, just output null.
+
+```
+select max(num) as num
+from
+(select num from my_numbers group by num having count(*) = 1) tmp
+;
+```
+
+**[620. Not Boring Movies](https://zhuanlan.zhihu.com/p/259714269)** 
+
+X city opened a new cinema, many people would like to go to this cinema. The cinema also gives out a poster indicating the movies’ ratings and descriptions.
+
+> cinema: id | movie | description | rating
+
+Please write a SQL query to output movies with an odd numbered ID and a description that is not 'boring'. Order the result by rating.
+
+```
+select *
+from cinema
+where id%2 = 1 and description <> "boring" # mod(id, 2) = 1
+order by rating desc
+;
+```
