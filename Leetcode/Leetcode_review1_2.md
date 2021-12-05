@@ -300,3 +300,128 @@ and
 product_id not in (select distinct product_id from sales where sales_date > '2019-12-31')
 ;
 ```
+
+
+**[1097. Game Play Analysis V](https://zhuanlan.zhihu.com/p/260246072)** 
+
+(player_id, event_date) is the primary key of this table. This table shows the activity of players of some game. Each row is a record of a player who logged in and played a number of games (possibly 0) before logging out on some day using some device.
+
+Activity: player_id | device_id | event_date | games_played
+
+We define the install date of a player to be the first login day of that player.
+
+We also define day 1 retention of some date X to be the number of players whose install date is X and they logged back in on the day right after X, divided by the number of players whose install date is X, rounded to 2 decimal places.
+
+Write an SQL query that reports for each install date, the number of players that installed the game on that day and the day 1 retention.
+
+```
+# get the first dates
+# left join to get the following day presence and day1 retention
+
+select d1.install_dt, count(distinct d1.player_id) as installs, 
+round( sum(case when d2.player_id is not null then 1 else 0 end)/count(distinct d1.player_id) , 2) as day1_retention # numerator can also be count(distinct d2.player_id)
+from
+(select min(event_date) as install_dt, player_id
+from activity
+group by 2) d1
+left join activity d2 on d1.player_id = d2.player_id and datediff(d2.event_date, d1.install_dt) = 1
+group by 1
+```
+
+**[1098. Unpopular Books](https://zhuanlan.zhihu.com/p/260250277)** 
+
+books: book_id | name | available_from
+
+orders: order_id | book_id | quantity | dispatch_date
+
+Write an SQL query that reports the books that have sold less than 10 copies in the last year, excluding books that have been available for less than 1 month from today. Assume today is 2019-06-23
+
+```
+# books less than 10 copies last year
+# books available for less than 1month
+# exclude
+
+select b.book_id, b.name
+from books b
+join 
+(select book_id 
+from orders
+where year(dispatch_date) = 2018
+group by 1
+having sum(quantity) < 10) tmp on b.book_id = tmp.book_id
+where datediff('2019-06-23', b.available_from) >= 30
+;
+
+```
+
+**[1107. New Users Daily Count](https://zhuanlan.zhihu.com/p/260280221)** 
+
+There is no primary key for this table, it may have duplicate rows.
+The activity column is an ENUM type of ('login', 'logout', 'jobs', 'groups', 'homepage').
+
+traffic: user_id | activity | activity_date
+
+Write an SQL query that reports for every date within at most 90 days from today, the number of users that logged in for the first time on that date. Assume today is 2019-06-30.
+
+```
+# first date of each user
+# constraint on date range
+# count user by date
+
+select login_date, count(user_id) as user_count
+from
+(select user_id, min(activity_date) as login_date
+from traffic
+where activity = 'login'
+group by 1) tmp
+where date_diff('2019-06-30', login_date) <= 90   #login_date >= datesub('2019-06-30', interval 90 day)
+;
+
+```
+
+**[1112. Highest Grade For Each Student](https://zhuanlan.zhihu.com/p/260281892)** 
+
+(student_id, course_id) is the primary key of this table.
+
+enrollments: student_id | course_id | grade
+
+Write a SQL query to find the highest grade with its corresponding course for each student. In case of a tie, you should find the course with the smallest courseid. The output must be sorted by increasing student_id.
+
+```
+# order course by grade desc within each student
+# rk = 1
+# order by student_id
+
+select student_id, course_id, grade
+from
+(select *, rank() over(partition by student_id order by grade desc, course_id asc) as rk
+from enrollments) tmp
+where rk = 1
+order by 1 # !!! Check your answer before talking to the interviewer
+;
+
+```
+
+**[1113. Reported Posts](https://zhuanlan.zhihu.com/p/260283912)** 
+
+There is no primary key for this table, it may have duplicate rows.
+
+The action column is an ENUM type of ('view', 'like', 'reaction', 'comment', 'report', 'share').
+
+The extra column has optional information about the action such as a reason for report or a type of reaction.
+
+actions: user_id | post_id | action_date | action | extra
+
+Write an SQL query that reports the number of posts reported yesterday for each report reason. Assume today is 2019-07-05.
+
+```
+# posts reported yesterday
+# count by reason
+
+select extra as report_reason, count(distinct post_id) as report_count
+from actions
+where action = 'report' and datediff('2019-07-05', action_date) = 1 # do we need "extra is not null" ?
+group by 1
+;
+
+```
