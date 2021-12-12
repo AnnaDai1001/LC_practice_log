@@ -425,3 +425,77 @@ group by 1
 ;
 
 ```
+
+
+**[1126. Active Businesses](https://zhuanlan.zhihu.com/p/260287403)** 
+
+(business_id, event_type) is the primary key of this table.
+
+Each row in the table logs the info that an event of some type occured at some business for a number of times.
+
+events: business_id | event_type | occurences
+
+Write an SQL query to find all active businesses.
+
+An active business is a business that has more than one event type with occurences greater than the average occurences of that event type among all businesses.
+
+```
+# get the avg of each event type
+# filter out those greater than avg
+# count event types by business
+
+select business_id
+from
+(select *, avg(occurences) over(partition by event_type) as avg_occ_by_type
+from events) tmp
+where occurences > avg_occ_by_type
+group by 1
+having count(event_type) > 1
+;
+
+```
+
+**[1127. User Purchase Platform](https://zhuanlan.zhihu.com/p/260379510)** 
+
+**hard and smart, similar to create histgram, group twice; and also need to add the zero lines; left join is key!**
+
+The table logs the spendings history of users that make purchases from an online shopping website which has a desktop and a mobile application.
+
+(user_id, spend_date, platform) is the primary key of this table. The platform column is an ENUM type of ('desktop', 'mobile').
+
+spending: user_id | spend_date | platform | amount
+
+Write an SQL query to find the total number of users and the total amount spent using mobile only, desktop only and both mobile and desktop together for each date. 
+
+```
+# find users who use both on each day
+# filter out those users 
+# aggregate the remaining -> mobile or desktop only
+# aggregate the filtered out data in #2 and union back and order by date
+# impute the both of missing dates
+
+with tmp1 as
+(
+select spend_date, user_id, case when count(*) = 2 then 'both' else platform end as platform, sum(amount) as total_amount
+from spending
+group by 1, 2
+),
+tmp2 as
+(
+select distinct spend_date, 'mobile' as platform
+from spending
+union
+select distinct spend_date, 'desktop' as platform
+from spending
+union
+select distinct spend_date, 'both' as platform
+from spending
+)
+
+select tmp2.spend_date, tmp2.platform, coalesce(sum(tmp1.total_amount), 0) as total_amount,
+coalesce(count(distinct tmp1.user_id), 0) as total_users
+from tmp2 left join tmp1
+on tmp2.spend_date = tmp1.spend_date and tmp2.platform = tmp1.platform
+group by 1,2
+
+```
