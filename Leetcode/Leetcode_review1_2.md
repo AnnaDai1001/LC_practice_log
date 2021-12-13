@@ -499,3 +499,212 @@ on tmp2.spend_date = tmp1.spend_date and tmp2.platform = tmp1.platform
 group by 1,2
 
 ```
+
+
+**[1132. Reported Posts II](https://zhuanlan.zhihu.com/p/260384789)** 
+
+There is no primary key for this table, it may have duplicate rows.
+
+The action column is an ENUM type of ('view', 'like', 'reaction', 'comment', 'report', 'share').
+
+The extra column has optional information about the action such as a reason for report or a type of reaction.
+
+actions: user_id | post_id | action_date | action | extra
+
+post_id is the primary key of this table.
+Each row in this table indicates that some post was removed as a result of being reported or as a result of an admin review.
+
+removals: post_id | remove_date
+
+Write an SQL query to find the average for daily percentage of posts that got removed after being reported as spam, rounded to 2 decimal places.
+
+```
+# filter posts: report, spam
+# left join table and calculate the daily percentage
+# get the average of percentage and round
+
+select round(avg(daily_pctg),2) as avg_daily_pctg
+from
+(
+select a.action_date, count(distinct r.post_id) / count(distinct r.post_id)*100 as daily_pctg
+from actions a 
+left join removal r
+on a.post_id = r.post_id
+where a.action = 'report' and a.extra = 'spam'
+group by a.action_date
+) tmp
+;
+
+```
+
+
+**[1141. User Activity for the Past 30 Days I](https://zhuanlan.zhihu.com/p/260555889)** 
+
+There is no primary key for this table, it may have duplicate rows. The activity_type column is an ENUM of type ('open_session', 'end_session', 'scroll_down', 'send_message'). The table shows the user activities for a social media website. Note that each session belongs to exactly one user.
+
+activity: user_id | session_id | activity_date | activity_type
+
+Write an SQL query to find the daily active user count for a period of 30 days ending 2019-07-27 inclusively. A user was active on some day if he/she made at least one activity on that day.
+
+```
+# filter by date
+# count user by date
+
+select activity_date as day, count(distinct user_id) as active_users
+from activity
+where activity_date <= '2019-07-27' and date_diff('2019-07-27', activity_date ) <= 30
+group by 1
+having activity_type not null
+;
+
+# or use subquery
+select activity_date as day, count(distinct user_id) as active_users
+from (select distinct activity_date, user_id
+from activity
+where activity_date > date_sub('2019-07-27', interval 30 day) and activity_date <= '2019-07-27'
+having count(distinct activity_type) >= 1) tmp
+group by 1
+;
+
+```
+
+**[1142. User Activity for the Past 30 Days II](https://zhuanlan.zhihu.com/p/260558715)** 
+
+Table refers to 1141
+
+Write an SQL query to find the average number of sessions per user for a period of 30 days ending 2019-07-27 inclusively, rounded to 2 decimal places. The sessions we want to count for a user are those with at least one activity in that time period.
+
+```
+# filter date 
+# count sessions by user
+# calculate average
+
+select round(avg(num_session), 2) as average_sessions_per_user
+from
+(
+select user_id, count(distinct session_id) as num_session
+from activity
+where activity_date > date_sub('2019-07-27', interval 30 day) and activity_date <= '2019-07-27' and activity_type is not null
+group by 1
+) tmp
+;
+
+```
+
+**[1148. Article Views I](https://zhuanlan.zhihu.com/p/260564257)** 
+# Both pandas and sql can directly compare two columns in each row
+
+There is no primary key for this table, it may have duplicate rows.
+Each row of this table indicates that some viewer viewed an article (written by some author) on some date. 
+Note that equal author_id and viewer_id indicate the same person.
+
+views: article_id | author_id | viewer_id | view_date
+
+Write an SQL query to find all the authors that viewed at least one of their own articles, sorted in ascending order by their id.
+
+```
+select distinct author_id as id
+from views
+where author_id = viewer_id
+order by 1
+;
+
+```
+
+
+**[1149. Article Views II](https://zhuanlan.zhihu.com/p/260566677)** 
+# Need to be cautious about the asking!
+Refers to table in 1148
+
+Write an SQL query to find all the people who viewed more than one article on the same date, sorted in ascending order by their id.
+```
+select distinct viewer_id as id
+from 
+(select viewer_id, view_date
+from views
+group by 1,2
+having count(distinct article_id) > 1
+) tmp
+order by 1
+;
+
+```
+
+
+**[1158. Market Analysis I](https://zhuanlan.zhihu.com/p/260616599)** 
+
+user_id is the primary key of this table.
+This table has the info of the users of an online shopping website where users can sell and buy items.
+
+users: user_id | join_date | favorite_brand
+
+order_id is the primary key of this table.
+item_id is a foreign key to the Items table.
+buyer_id and seller_id are foreign keys to the Users table.
+
+orders: order_id | order_date | item_id | buyer_id | seller_id
+
+item_id is the primary key of this table.
+
+items: item_id | item_brand
+
+Write an SQL query to find for each user, the join date and the number of orders they made as a buyer in 2019.
+
+```
+# get buyer and #orders in 2019
+# join to users table
+
+select u.user_id as buyer_id, u.join_date, coalese(tmp.num_order, 0) as orders_in_2019
+from users u
+left join 
+(
+select buyer_id, count(order_id) as num_order
+from orders
+where year(order_date) = 2019
+group by 1
+) tmp
+on u.user_id = tmp.buyer_id
+;
+
+```
+
+**[1159. Market Analysis II](https://zhuanlan.zhihu.com/p/260621429)** 
+
+user_id is the primary key of this table.
+This table has the info of the users of an online shopping website where users can sell and buy items.
+
+users: user_id | join_date | favorite_brand
+
+order_id is the primary key of this table.
+item_id is a foreign key to the Items table.
+buyer_id and seller_id are foreign keys to the Users table.
+
+orders: order_id | order_date | item_id | buyer_id | seller_id
+
+item_id is the primary key of this table.
+
+items: item_id | item_brand
+
+Write an SQL query to find for each user, whether the brand of the second item (by date) they sold is their favorite brand. If a user sold less than two items, report the answer for that user as no.
+
+It is guaranteed that no seller sold more than one item on a day.
+
+```
+# rank by seller and date
+# no second item -> no
+# yes second item -> check
+
+select u.user_id as seller_id, coalese(case when i.item_id = second.item_id then 'yes' else 'no' end, 'no') as 2nd_item_fav_brand
+from users u
+left join items i on u.item_brand = i.item_brand
+left join
+(
+select seller_id, item_id
+from(
+select seller_id, item_id, rank() over(partition by seller_id order by order_date) as rk
+from orders) tmp
+where rk = 2) second
+on u.user_id = second.seller_id
+;
+
+```
