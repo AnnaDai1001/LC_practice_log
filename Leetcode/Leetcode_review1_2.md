@@ -707,4 +707,137 @@ where rk = 2) second
 on u.user_id = second.seller_id
 ;
 
+
 ```
+
+**[1164. Product Price at a Given Date](https://zhuanlan.zhihu.com/p/260622724)** 
+
+(product_id, change_date) is the primary key of this table.
+Each row of this table indicates that the price of some product was changed to a new price at some date.
+
+products: product_id | new_price | change_date
+
+Write an SQL query to find the prices of all products on 2019-08-16. Assume the price of all products before any change is 10.
+
+```
+# tbl1: has price change before 2019-08-16
+# tbl2: most recent price change after 2019-08-16
+with tmp1 as
+(
+select product_id, new_price as price
+from (select product_id, new_price, rank() over(partition by product_id order by change_date desc) as rk
+from products where change_date <= '2019-08-16') tmp
+where rk = 1
+),
+tmp2 as
+(select distinct product_id, 10 as price 
+from products 
+where change_date > '2019-08-16' and product_id not in (select product_id from tmp1) # change_date condition may not be necessary
+)
+
+select *
+from tmp1
+union
+select * 
+from tmp2
+order by price desc, product_id asc;
+```
+
+**[1173. Immediate Food Delivery I](https://zhuanlan.zhihu.com/p/260721471)** 
+
+delivery_id is the primary key of this table.
+The table holds information about food delivery to customers that make orders at some date and specify a preferred delivery date (on the same order date or after it).
+
+delivery: delivery_id | customer_id | order_date | customer_pref_delivery_date
+
+If the preferred delivery date of the customer is the same as the order date then the order is called immediate otherwise it's called scheduled.
+
+Write an SQL query to find the percentage of immediate orders in the table, rounded to 2 decimal places.
+
+```
+select round(sum(case when order_date = customer_pref_delivery_date then 1 else 0) / count(delivery_id) * 100.0, 2) as immediate_percentage
+from delivery
+;
+
+# or
+
+select round(avg(order_date = customer_pref_delivery_date) * 100.0, 2) as immediate_percentage
+from delivery
+;
+
+```
+
+**[1174. Immediate Food Delivery II](https://zhuanlan.zhihu.com/p/260724111)** 
+
+delivery_id is the primary key of this table.
+The table holds information about food delivery to customers that make orders at some date and specify a preferred delivery date (on the same order date or after it).
+
+delivery: delivery_id | customer_id | order_date | customer_pref_delivery_date
+
+If the preferred delivery date of the customer is the same as the order date then the order is called immediate otherwise it's called scheduled.
+
+The first order of a customer is the order with the earliest order date that customer made. It is guaranteed that a customer has exactly one first order.
+
+Write an SQL query to find the percentage of immediate orders in the first orders of all customers, rounded to 2 decimal places.
+
+```
+select round(avg(order_date = customer_pref_delivery_date)*100,2) as immediate_percentage
+from
+(select *, rank() over(partition by customer_id order by order_date asc) as rk
+from delivery) tmp
+where rk = 1
+;
+```
+
+**[1179. Reformat Department Table](https://zhuanlan.zhihu.com/p/260726972)** 
+
+(id, month) is the primary key of this table.
+The table has information about the revenue of each department per month.
+The month has values in ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].
+
+department: id | revenue | month
+
+Write an SQL query to reformat the table such that there is a department id column and a revenue column for each month.
+
+```
+# pivot table
+select id, 
+sum(case when month = 'Jan' then revenue else null end) as Jan_Revenue,
+sum(case when month = 'Feb' then revenue else null end) as Feb_Revenue,
+sum(case when month = 'Mar' then revenue else null end )as Mar_Revenue,
+sum(case when month = 'Apr' then revenue else null end) as Apr_Revenue,
+sum(case when month = 'May' then revenue else null end) as May_Revenue,
+sum(case when month = 'Jun' then revenue else null end) as Jun_Revenue,
+sum(case when month = 'Jul' then revenue else null end) as Jul_Revenue,
+sum(case when month = 'Aug' then revenue else null end) as Aug_Revenue,
+sum(case when month = 'Sep' then revenue else null end) as Sep_Revenue,
+sum(case when month = 'Oct' then revenue else null end) as Oct_Revenue,
+sum(case when month = 'Nov' then revenue else null end) as Nov_Revenue,
+sum(case when month = 'Dec' then revenue else null end) as Dec_Revenue
+from department
+group by 1
+;
+```
+
+**[1193. Monthly Transactions I](https://zhuanlan.zhihu.com/p/260881320)** 
+
+id is the primary key of this table.
+The table has information about incoming transactions.
+The state column is an enum of type ["approved", "declined"].
+
+transaction: id | country | state | amount | trans_date
+
+Write an SQL query to find for each month and country, the number of transactions and their total amount, the number of approved transactions and their total amount.
+
+```
+select date_format(trans_date, '%Y-%m') as month, country,  # date_format function!
+count(id) as num_trans,
+sum(amount) as sum_trans,
+count(case when state = 'approved' then id else end) as num_app_trans,
+sum(case when state = 'approved' then amount else 0 end) as sum_app_trans
+from transaction
+group by 1,2
+;
+```
+
+
