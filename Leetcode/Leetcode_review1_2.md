@@ -841,3 +841,79 @@ group by 1,2
 ```
 
 
+**[1194. Tournament Winners](https://zhuanlan.zhihu.com/p/260882793)** 
+
+player_id is the primary key of this table.
+Each row of this table indicates the group of each player.
+
+players: player_id | group_id
+
+match_id is the primary key of this table.
+Each row is a record of a match, first_player and second_player contain the player_id of each match.
+first_score and second_score contain the number of points of the first_player and second_player respectively.
+You may assume that, in each match, players belong to the same group.
+
+matches: match_id | first_player | second_player | first_score | second_score
+
+The winner in each group is the player who scored the maximum total points within the group. In the case of a tie, the lowest player_id wins.
+
+Write an SQL query to find the winner in each group.
+
+```
+# match_id | player_id | score
+# group_id | player_id | total | rk
+# group_id | player_id 
+
+with score as
+(
+select first_player as player_id, first_score as score
+from matches
+union all
+select second_player as player_id, second_score as score
+from matches
+),
+total as
+(
+select p.group_id, p.player_id, row_number() over(partition by p.group_id order by ifnull(s.total,0) desc, p.player_id asc) as rk
+from players p left join 
+  (
+  select player_id, sum(score) as total
+  from score
+  group by 1
+  ) s
+on p.player_id = s.player_id
+)
+
+select group_id, player_id
+from total
+where rk = 1
+;
+```
+
+
+**[1204. Last Person to Fit in the Elevator](https://zhuanlan.zhihu.com/p/260888277)** 
+
+person_id is the primary key column for this table.
+
+This table has the information about all people waiting for an elevator.
+
+The person_id and turn columns will contain all numbers from 1 to n, where n is the number of rows in the table.
+
+queue: person_id | person_name | weight | turn
+
+The maximum weight the elevator can hold is 1000.
+
+Write an SQL query to find the person_name of the last person who will fit in the elevator without exceeding the weight limit. It is guaranteed that the person who is first in the queue can fit in the elevator.
+
+```
+select person_name
+from (
+  select person_name, cum_w, lead(cum_w,1) over(order by turn) next_cum_w
+  from (select *, sum(weight) over(order by turn) as cum_w
+  from queue) tmp
+) tmp2
+where cum_w <= 1000 and next_cum_w > 1000
+;
+```
+
+
