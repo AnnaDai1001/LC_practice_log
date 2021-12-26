@@ -916,4 +916,242 @@ where cum_w <= 1000 and next_cum_w > 1000
 ;
 ```
 
+**[1205. Monthly Transactions II](https://zhuanlan.zhihu.com/p/260890494)** 
 
+id is the primary key of this table.
+The table has information about incoming transactions.
+The state column is an enum of type ["approved", "declined"]
+
+transactions:id | country | state | amount | trans_date
+
+Chargebacks contains basic information regarding incoming chargebacks from some transactions placed in Transactions table.
+trans_id is a foreign key to the id column of Transactions table.
+Each chargeback corresponds to a transaction made previously even if they were not approved.
+
+chargebacks: trans_id | charge_date
+
+Write an SQL query to find for each month and country, the number of approved transactions and their total amount, the number of chargebacks and their total amount.
+
+Note: In your query, given the month and country, ignore rows with all zeros.
+
+```
+select date_format(t.trans_date, '%Y-%m') as month, t.country,
+sum(t.state = 'approved') as approved_count, 
+sum(case when t.state = 'approved' then t.amount else 0 end) as approved_amount,
+count(distinct c.trans_id) as chargeback_count,
+sum(case when c.trans_id is not null then t.amount else 0 end) as chargeback_amount
+from transactions t left join
+chargebacks c on t.id = c.trans_id
+group by 1, 2
+;
+```
+
+**[1211. Queries Quality and Percentage](https://zhuanlan.zhihu.com/p/260937964)** 
+
+There is no primary key for this table, it may have duplicate rows.
+
+This table contains information collected from some queries on a database.
+
+The position column has a value from 1 to 500.
+
+The rating column has a value from 1 to 5. Query with rating less than 3 is a poor query.
+
+queries: query_name | result | position | rating
+
+We define query quality as: The average of the ratio between query rating and its position.
+
+We also define poor_query_percentage as: The percentage of all queries with rating less than 3.
+
+Write an SQL query to find each query name, the quality and poor_query_percentage.
+
+Both quality and poor_query_percentage should be rounded to 2 decimal places.
+
+```
+select query_name,
+round(avg(rating/position),2) as quality, round(avg(rating < 3) * 100.0,2) as poor_query_percentage
+from queries
+group by 1
+;
+```
+
+
+**[1212. Team Scores in Football Tournament](https://zhuanlan.zhihu.com/p/260941002)** 
+
+team_id is the primary key of this table.
+Each row of this table represents a single football team.
+
+teams: team_id | team_name
+
+match_id is the primary key of this table.
+Each row is a record of a finished match between two different teams. 
+Teams host_team and guest_team are represented by their IDs in the teams table (team_id) and they scored host_goals and guest_goals goals respectively.
+
+matches: match_id | host_team | guest_team | host_goals | guest_goals
+
+You would like to compute the scores of all teams after all matches. Points are awarded as follows:
+
+A team receives three points if they win a match (Score strictly more goals than the opponent team).
+A team receives one point if they draw a match (Same number of goals as the opponent team).
+A team receives no points if they lose a match (Score less goals than the opponent team).
+Write an SQL query that selects the team_id, team_name and num_points of each team in the tournament after all described matches. Result table should be ordered by num_points (decreasing order). In case of a tie, order the records by team_id (increasing order).
+
+```
+with points as
+(
+select *,
+if(host_goals > guest_goals, 3, if(host_goals = guest_goals, 1, 0)) as host_point,
+if(host_goals < guest_goals, 3, if(host_goals = guest_goals, 1, 0)) as guest_point
+from matches
+),
+each_team as
+(
+select host_team as team_id, host_point as point
+from matches
+union all
+select guest_team as team_id, guest_point as point
+from matches
+)
+
+select t.team_id, t.team_name, sum(coalesce(e.point,0)) as num_points
+from teams t left join each_team e
+on t.team_id = e.team_id
+group by 1,2
+order by 3 desc, 1
+;
+```
+
+
+**[1225. Report Contiguous Dates (hard)](https://zhuanlan.zhihu.com/p/261056901)** 
+
+Primary key for this table is fail_date.
+Failed table contains the days of failed tasks
+
+failed: failed_date
+
+Primary key for this table is success_date.
+Succeeded table contains the days of succeeded tasks.
+
+succeeded: succeeded_date
+
+A system is running one task every day. Every task is independent of the previous tasks. The tasks can fail or succeed.
+
+Write an SQL query to generate a report of period_state for each continuous interval of days in the period from 2019-01-01 to 2019-12-31.
+
+period_state is 'failed' if tasks in this interval failed or 'succeeded' if tasks in this interval succeeded. Interval of days are retrieved as start_date and end_date.
+
+Order result by start_date.
+
+```
+# group consecutive succeeded / failed dates together
+
+# method 1 - 
+with base_tbl as 
+(
+select 'succeeded' as period_state, succeeded_date as date
+from succeeded
+where succeeded_date between '2019-01-01' and '2019-12-31'
+union
+select 'failed' as period_state, failed_date as date
+from failed
+where failed_date between '2019-01-01' and '2019-12-31'
+),
+group_tbl as 
+(
+select *, 
+case period_state when 'succeeded' then
+  datediff(date, '2018-01-01') - row_number() over(partition by period_state order by date)
+  when 'failed' then
+  datediff(date, '2017-01-01') - row_number() over(partition by period_state order by date)
+  else -1000 end 
+as grp
+from base_tbl
+),
+rel_tbl as
+(
+select period_state, grp, min(date) as start_date, max(date) as end_date
+from group_tbl
+group by 1,2
+)
+
+select period_date, start_date, end_date
+from rel_tbl
+order by 2
+;
+
+
+# method 2 - concise way
+select 'succeeded' as period_state, min(succeeded_date) as start_date, max(succeeded_date) as end_date
+from succeeded
+where succeeded_date between '2019-01-01' and '2019-12-31'
+group by dayofyear(succeeded_date) - row_number() over(order by succeeded_date)
+
+union
+
+select 'failed' as period_state, min(failed_date) as start_date, max(failed_date) as end_date
+from failed
+where failed_date between '2019-01-01' and '2019-12-31'
+group by dayofyear(failed_date) - row_number() over(order by failed_date)
+order by start_date
+;
+
+```
+
+**[1241. Number of Comments per Post](https://zhuanlan.zhihu.com/p/261060205)** 
+
+There is no primary key for this table, it may have duplicate rows.
+
+Each row can be a post or comment on the post.
+
+**parent_id is null for posts.**
+
+parent_id for comments is sub_id for another post in the table.
+
+submissions: sub_id | parent_id
+
+Write an SQL query to find number of comments per each post.
+
+Result table should contain post_id and its corresponding number of comments, and must be sorted by post_id in ascending order.
+
+Submissions may contain duplicate comments. You should count the number of unique comments per post.
+
+Submissions may contain duplicate posts. You should treat them as one post.
+
+```
+with posts as
+(
+select distinct sub_id as post_id
+from submissions
+where parent_id is null
+)
+
+select p.post_id, coalese(count(distinct s.sub_id), 0) as number_of_comments
+from posts p left join submissions s
+on p.post_id = s.parent_id
+group by 1
+order by 1
+;
+```
+
+**[1251. Average Selling Price](https://zhuanlan.zhihu.com/p/261085459)** 
+
+(product_id, start_date, end_date) is the primary key for this table.
+Each row of this table indicates the price of the product_id in the period from start_date to end_date.
+For each product_id there will be no two overlapping periods. That means there will be no two intersecting periods for the same product_id.
+
+prices: product_id | start_date | end_date | price
+
+There is no primary key for this table, it may contain duplicates.
+Each row of this table indicates the date, units and product_id of each product sold.
+
+unitssold: product_id | purchase_date | units
+
+Write an SQL query to find the average selling price for each product.
+
+average_price should be rounded to 2 decimal places.
+
+```
+select 
+from prices right join unitssold
+on 
+;
+```
