@@ -1150,8 +1150,389 @@ Write an SQL query to find the average selling price for each product.
 average_price should be rounded to 2 decimal places.
 
 ```
-select 
-from prices right join unitssold
-on 
+select u.product_id, round( sum(u.units * p.price) / sum(u.units), 2) as average_price
+from prices p right join unitssold u
+on p.product_id = u.product_id
+and u.purchase_id between p.start_date and p.end_date
+group by 1
+;
+```
+
+**[1264. Page Recommendations](https://zhuanlan.zhihu.com/p/261086655)** 
+
+(user1_id, user2_id) is the primary key for this table.
+Each row of this table indicates that there is a friendship relation between user1_id and user2_id.
+
+friendship: user1_id | user2_id
+
+likes: user_id | page_id
+
+Write an SQL query to recommend pages to the user with user_id = 1 using the pages that your friends liked. It should not recommend pages you already liked.
+
+Return result table in any order without duplicates.
+
+```
+# friends -> friends liked
+# exclude 1 liked
+select distinct page_id as recommended_page
+from likes
+where user_id in (select user_id
+from 
+  (select user1_id as user_id from friendship where user2_id = 1
+  union
+  select user2_id as user_id from friendship where user1_id = 1
+  ) t
+)
+and page_id not in (
+select page_id from likes where user_id = 1
+)
+;
+```
+
+**[1270. All People Report to the Given Manager](https://zhuanlan.zhihu.com/p/262497801)** 
+
+employee_id is the primary key for this table.
+Each row of this table indicates that the employee with ID employee_id and name employee_name reports his work to his/her direct manager with manager_id
+The head of the company is the employee with employee_id = 1.
+
+employees: employee_id | employee_name | manager_id
+
+Write an SQL query to find employee_id of all employees that directly or indirectly report their work to the head of the company.
+
+The indirect relation between managers will not exceed 3 managers as the company is small.
+
+Return result table in any order without duplicates.
+
+```
+with direct as
+(
+select employee_id
+from employees
+where employee_id <> 1 and manager_id = 1
+),
+indirect1 as 
+(
+select e.employee_id
+from employees e join direct d
+on e.manager_id = d.employee_id
+),
+indirect2 as
+(
+select e2.employee_id
+from employees e2 join indirect1 ind1
+on e2.manager_id = ind1.employee_id
+)
+
+select * from direct
+union
+select * from indirect1
+union
+select * from indirect2
+;
+
+
+## not sure whether the following solution correct or not
+## the sql syntax checker can't validate, not sure why
+select distinct e.employee_id
+from employees e 
+left join employees m
+on e.manager_id = m.employee_id
+left join employees mm
+on m.manager_id = mm.employee_id
+where e.employee_id <> 1 and
+(e.manager_id = 1 or m.manager_id = 1 or mm.manager_id = 1)
+;
+```
+
+
+**[1280. Students and Examinations](https://zhuanlan.zhihu.com/p/262501270)** 
+
+student_id is the primary key for this table.
+Each row of this table contains the ID and the name of one student in the school.
+
+students: student_id | student_name
+
+subject_name is the primary key for this table.
+Each row of this table contains the name of one subject in the school.
+
+subjects: subject_name
+
+There is no primary key for this table. It may contain duplicates.
+Each student from the Students table takes every course from Subjects table.
+Each row of this table indicates that a student with ID student_id attended the exam of subject_name.
+
+examinations: student_id | subject_name
+
+Write an SQL query to find the number of times each student attended each exam.
+
+Order the result table by student_id and subject_name.
+
+```
+select tmp.student_id, tmp.student_name, tmp.subject_name,
+sum(case when e.student_id is not null then 1 else 0 end) as attended_exams
+from
+(select s.student_id, s.student_name, sub.subject_name
+from students s cross join subjects sub) tmp
+left join examinations e
+ on tmp.student_id = e.student_id and tmp.subject_name = e.subject_name
+group by 1,2,3
+order by 1,3
+;
+```
+
+**[1285. Find the Start & End # of Continuous Ranges](https://zhuanlan.zhihu.com/p/262505261)** 
+
+id is the primary key for this table.
+Each row of this table contains the ID in a log Table.
+
+logs: log_id
+
+Since some IDs have been removed from Logs. Write an SQL query to find the start and end number of continuous ranges in table Logs.
+
+Order the result table by start_id.
+
+```
+select min(log_id) as start_id, max(log_id) as end_id
+from logs
+group by log_id - row_number() over(order by log_id)
+order by 1
+;
+
+### 上面链接的解法
+with cte as
+(select log_id, log_id - row_number() over(order by log_id) as rk
+from logs)
+
+select first_value(log_id) over(partition by rk order by log_id) as start_id,
+first_value(log_id) over(partition by rk order by log_id desc) as start_id
+from cte
+order by start_id
+;
+```
+
+**[1294. Weather Type in Each Country](https://zhuanlan.zhihu.com/p/262903848)** 
+
+country_id is the primary key for this table. Each row of this table contains the ID and the name of one country.
+
+countries: country_id | country_name
+
+(country_id, day) is the primary key for this table. Each row of this table indicates the weather state in a country for one day.
+
+weather: country_id | weather_state | day
+
+Write an SQL query to find the type of weather in each country for November 2019.
+
+The type of weather is Cold if the average weather_state is less than or equal 15, Hot if the average weather_state is greater than or equal 25 and Warm otherwise.
+
+Return result table in any order.
+
+```
+select c.country_name, 
+case when avg_weather <= 15 then 'Cold' when avg_weather >= 25 then 'Hot' else 'Warm' end as weather_type
+from countries c join 
+(
+select country_id, avg(weather_state) as avg_weather
+from weather
+where month(day) = 11 and year(day) = 2019
+group by 1
+) tmp
+on c.country_id = tmp.country_id
+;
+
+## another method
+select c.country_name, 
+case when avg(w.weather) <= 15 then 'Cold' when avg(w.weather) >= 25 then 'Hot' else 'Warm' end as weather_type
+from countries c join weather w
+on c.country_id = w.country_id
+where date_format(day, '%Y-%m') = '2019-11'
+group by 1
+;
+```
+
+**[1303. Find the Team Size](https://zhuanlan.zhihu.com/p/262911231)** 
+
+employee_id is the primary key for this table.
+Each row of this table contains the ID of each employee and their respective team.
+
+employee: employee_id | team_id
+
+Write an SQL query to find the team size of each of the employees.
+
+Return result table in any order.
+
+```
+select e.employee_id, tmp.team_size
+from employee e
+left join
+(select team_id, count(distinct employee_id) as team_size
+from employee
+group by 1) tmp
+on e.team_id = tmp.team_id
+;
+
+## use window function
+select employee_id, count(employee_id) over(partition by team_id) as team_size
+from employee
+order by 1
+;
+```
+
+**[1308. Running Total for Different Genders](https://zhuanlan.zhihu.com/p/262915226)** 
+
+(gender, day) is the primary key for this table. A competition is held between females team and males team. Each row of this table indicates that a player_name and with gender has scored score_point in someday. Gender is 'F' if the player is in females team and 'M' if the player is in males team.
+
+scores: player_name | gender | day | score_points
+
+Write an SQL query to find the total score for each gender at each day.
+
+Order the result table by gender and day
+
+```
+## This syntax is a little funky the first time you see it. But, the window function is evaluated after the GROUP BY. What this says is to sum the sum of the total 
+
+select gender, day, sum(sum(score_points)) over(partition by gender order by day) as total
+from scores
+group by 1, 2
+order by 1, 2
+;
+```
+
+**[1321. Restaurant Growth (Hard)](https://zhuanlan.zhihu.com/p/262917262)** 
+
+You are the restaurant owner and you want to analyze a possible expansion (there will be at least one customer every day).
+
+Write an SQL query to compute moving average of how much customer paid in a 7 days window (current day + 6 days before) .
+
+The query result format is in the following example:
+
+Return result table ordered by visited_on.
+
+average_amount should be rounded to 2 decimal places, all dates are in the format ('YYYY-MM-DD').
+
+```
+with cte as
+(
+select visited_on,
+row_number() over(order by visited) as rown,
+sum(sum(amount)) over(order by visited_on rows 6 preceding) as total
+from customer
+group by 1
+)
+
+select visited_on, round(total/7.0, 2) as average_amount
+from cte
+where rown >= 7
+;
+```
+
+**[1322. Ads Performance](https://zhuanlan.zhihu.com/p/262925529)** 
+
+(ad_id, user_id) is the primary key for this table.
+Each row of this table contains the ID of an Ad, the ID of a user and the action taken by this user regarding this Ad.
+The action column is an ENUM type of ('Clicked', 'Viewed', 'Ignored').
+
+ads: ad_id | user_id | action
+
+A company is running Ads and wants to calculate the performance of each Ad.
+
+Performance of the Ad is measured using Click-Through Rate (CTR) where: CTR = 0 if ad total clicks + ad total views = 0 else = ad total clicks / (ad total clicks + ad total views) * 100
+
+Write an SQL query to find the ctr of each Ad.
+
+Round ctr to 2 decimal points. Order the result table by ctr in descending order and by ad_id in ascending order in case of a tie.
+
+```
+with cte as
+(
+select ad_id, 
+sum(case when action = 'Clicked' then 1 else 0 end) as clicks,
+sum(case when action = 'Viewed' then 1 else 0 end) as views
+group by 1
+)
+
+select ad_id,
+round(
+case when clicks = 0 and views = 0 then 0 else clicks / (clicks + views) * 100.0
+,2) as ctr
+from cte
+order by 2 desc, 1
+;
+```
+
+**[1327. List the Products Ordered in a Period](https://zhuanlan.zhihu.com/p/263247721)** 
+
+product_id is the primary key for this table.
+This table contains data about the company's products.
+
+products: product_id | product_name | product_category
+
+There is no primary key for this table. It may have duplicate rows.
+product_id is a foreign key to Products table.
+unit is the number of products ordered in order_date.
+
+orders: product_id | order_date | unit
+
+Write an SQL query to get the names of products with greater than or equal to 100 units ordered in February 2020 and their amount.
+
+Return result table in any order.
+
+```
+select o.product_id, sum(o.unit) as unit
+from orders o join products p on
+o.product_id = p.product_id
+where date_format(o.order_date, '%Y-%m') = '2020-02'
+group by 1
+having sum(o.unit) >= 100
+;
+```
+
+**[1336. Number of Transactions per Visit (Hard)](https://zhuanlan.zhihu.com/p/263352450)** 
+
+(user_id, visit_date) is the primary key for this table.
+Each row of this table indicates that user_id has visited the bank in visit_date.
+
+visits: visit_id | visit_date
+
+There is no primary key for this table, it may contain duplicates.
+Each row of this table indicates that user_id has done a transaction of amount in transaction_date.
+It is guaranteed that the user has visited the bank in the transaction_date.(i.e The Visits table contains (user_id, transaction_date) in one row)
+
+transactions: user_id | transaction_date | amount
+
+A bank wants to draw a chart of the number of transactions bank visitors did in one visit to the bank and the corresponding number of visitors who have done this number of transaction in one visit.
+
+Write an SQL query to find how many users visited the bank and didn't do any transactions, how many visited the bank and did one transaction and so on.
+
+The result table will contain two columns:
+
+transaction_count which is the number of transactions done in one visit.
+visits_count which is the corresponding number of users who did transaction_count in one visit to the bank.
+transaction_count should take all values from 0 to max(transaction_count) done by one or more users.
+
+Order the result table by transaction_count.
+
+```
+with full_cnt as
+(
+select row_number() over() as transaction_count from transactions
+union
+select 0 as transaction_count
+),
+trans as
+(
+select v.user_id, v.visit_date,
+ifnull(count(t.amount) over(partition by v.user_id, v.visit_date), 0) as transaction_count
+from visits v left join transactions t
+on v.user_id = t.user_id and v.visit_date = t.transaction_date
+group by 1, 2
+)
+
+select trans.transaction_count, 
+ifnull(count(distinct trans.user_id, trans.visit_date), 0) as visits_count
+from trans right join full_cnt
+on trans.transaction_count = full_cnt.transaction_count
+where full_cnt.transaction_count <= (select max(transaction_count) from trans)
+group by 1
+order by 1
 ;
 ```
