@@ -1536,3 +1536,241 @@ group by 1
 order by 1
 ;
 ```
+
+**[1327. List the Products Ordered in a Period](https://zhuanlan.zhihu.com/p/263247721)** 
+
+product_id is the primary key for this table.
+This table contains data about the company's products.
+
+products: product_id | product_name | product_category
+
+There is no primary key for this table. It may have duplicate rows.
+product_id is a foreign key to Products table.
+unit is the number of products ordered in order_date.
+
+orders: product_id | order_date | unit
+
+Write an SQL query to get the names of products with greater than or equal to 100 units ordered in February 2020 and their amount.
+
+Return result table in any order.
+
+```
+select o.product_id, sum(o.unit) as unit
+from orders o join products p on
+o.product_id = p.product_id
+where date_format(o.order_date, '%Y-%m') = '2020-02'
+group by 1
+having sum(o.unit) >= 100
+;
+```
+
+**[1341. Movie Rating](https://zhuanlan.zhihu.com/p/263473057)** 
+
+movie_id is the primary key for this table. title is the name of the movie.
+
+movies: movie_id | title
+
+user_id is the primary key for this table.
+
+users: user_id | name
+
+(movie_id, user_id) is the primary key for this table.
+This table contains the rating of a movie by a user in their review.
+created_at is the user's review date.
+
+movie_rating: movie_id | user_id | rating | created_at
+
+Write the following SQL query:
+
+Find the name of the user who has rated the greatest number of http://movies.In case of a tie, return lexicographically smaller user name.
+Find the movie name with the highest average rating in February 2020.In case of a tie, return lexicographically smaller movie name.
+
+```
+(select u.name as results
+from user u join (
+  select user_id, rank() over(order by count(rating) desc) as rk
+  from movie_rating 
+  group by user_id
+  ) mr1 on u.user_id = mr1.user_id
+where mr1.rk = 1
+order by 1
+limit 1)
+union all
+(select m.title as results
+from movies m join (
+  select movie_id, rank() over(order by avg(rating) desc) as rk
+  from movie_rating 
+  where left(create_at,7) = '2020-02'
+  group by movie_id
+  ) mr1 on u.user_id = mr1.user_id
+where mr1.rk = 1
+order by 1
+limit 1)
+;
+
+# Simpler expression
+(
+select u.name as results
+from users u join movie_rating mr1 on u.user_id = mr1.user_id
+group by 1
+order by count(distinct mr1.movie_id) desc, u.name asc
+limit 1
+)
+union all
+(
+select m.title as results
+from movies m join movie_rating mr2 on m.movie_id = mr2.movie_id
+where left(created_at, 7) = '2020-02'
+group by 1
+order by avg(mr2.rating) desc, m.title asc
+limit 1
+)
+;
+
+# Python 
+rel_df1 = pd.merge(movie_rating, users, how = 'inner', on = ['user_id'])
+rel_df1 = rel_df1.groupby(
+                ['name'], as_index = False).agg(
+                  {'movie_id': 'nunique()'}
+                  ).rename(
+                    columns = {'movie_id': 'cnt'})
+res1 = rel_df1.sort_values(by = ['cnt', 'name'], ascending = [False, True]).reset_index(drop = True).name[0]
+
+rel_df2 = pd.merge(movie_rating, movies, how = 'inner', on = ['movie_id'])
+rel_df2 = rel_df2.groupby(
+                ['title'], as_index = False).agg(
+                  {'rating': 'mean'}
+                  ).rename(
+                    columns = {'rating': 'avg_rating'})
+res2 = rel_df2.sort_values(by = ['avg_rating', 'title'], ascending = [False, True]).reset_index(drop = True).name[0]
+
+pd.DataFrame({'results': [res1, res2]})
+
+```
+
+**[1350. Students With Invalid Departments](https://zhuanlan.zhihu.com/p/263478067)** 
+
+id is the primary key of this table.
+The table has information about the id of each department of a university.
+
+departments: id | name
+
+id is the primary key of this table.
+The table has information about the id of each student at a university and the id of the department he/she studies at.
+
+students: id | name | department_id
+
+Write an SQL query to find the id and the name of all students who are enrolled in departments that no longer exists.
+
+Return the result table in any order.
+
+```
+select s.id, s.name
+from students s left join departments d on s.department_id = d.id
+where d.name is null
+;
+```
+
+**[1355. Activity Participants](https://zhuanlan.zhihu.com/p/263486443)** 
+
+id is the id of the friend and primary key for this table. name is the name of the friend.
+activity is the name of the activity which the friend takes part in.
+
+friends: id | name | activity
+
+id is the primary key for this table. name is the name of the activity.
+
+activities: id | name
+
+Write an SQL query to find the names of all the activities with neither maximum, nor minimum number of participants.
+
+Return the result table in any order. Each activity in table Activities is performed by any person in the table Friends.
+
+```
+with cte as (
+select activity, count(distinct id) as cnt
+from friends
+group by 1
+)
+select activity
+from cte
+where cnt <> (select max(cnt) from cte) 
+and cnt <> (select min(cnt) from cte) 
+;
+```
+
+**[1364. Number of Trusted Contacts of a Customer](https://zhuanlan.zhihu.com/p/263490392)** 
+
+customer_id is the primary key for this table. Each row of this table contains the name and the email of a customer of an online shop.
+
+customers: customer_id | customer_name | email
+
+(user_id, contact_email) is the primary key for this table.
+Each row of this table contains the name and email of one contact of customer with user_id. This table contains information about people each customer trust. The contact may or may not exist in the Customers table.
+
+contacts: user_id | contact_name | contact_email
+
+invoice_id is the primary key for this table.
+Each row of this table indicates that user_id has an invoice with invoice_id and a price.
+
+invoices: invoice_id | price | user_id
+
+Write an SQL query to find the following for each invoice_id：
+
+customer_name: The name of the customer the invoice is related to.
+price: The price of the invoice.
+contacts_cnt: The number of contacts related to the customer.
+trusted_contacts_cnt: The number of contacts related to the customer and at the same time they are customers to the shop. (i.e His/Her email exists in the Customers table.)
+Order the result table by invoice_id.
+
+```
+with cte as (
+select cus.customer_name, cus.customer_id,
+count(distinct con.contact_name) as contacts_cnt,
+count(distinct (case when con.contact_name in (select customer_name from customers) then con.contact_name else null end)) as trusted_contacts_cnt
+from customers cus left join contacts con on cus.customer_id = con.user_id
+group by 1, 2
+)
+
+select i.invoice_id, cte.customer_name, i.price, 
+ifnull(cte.contacts_cnt, 0), ifnull(cte.trusted_contacts_cnt, 0)
+from invoices i left join cte on i.user_id = cte.customer_id
+order by 1
+
+## zhihu solution
+select i.invoice_id, cus.customer_name, i.price,
+ifnull(count(con.user_id), 0) as contacts_cnt,
+sum(case when con.contact_name in (select distinct customer_name from customers) then 1 else 0 end ) as trusted_contacts_cnt
+from invoice i
+left join customers cus on i.user_id = cus.customer_id
+left join contacts con on i.user_id = con.user_id
+group by 1,2,3
+order by 1
+;
+```
+
+**[1369. Get the Second Most Recent Activity](https://zhuanlan.zhihu.com/p/264096311)** 
+
+This table does not contain primary key.
+This table contain information about the activity performed of each user in a period of time.
+A person with username performed a activity from startDate to endDate.
+
+useractivity: user_name | activity | startdate | enddate
+
+Write an SQL query to show the second most recent activity of each user.
+
+If the user only has one activity, return that one.
+
+A user can't perform more than one activity at the same time. Return the result table in any order.
+
+```
+with cte as (
+select *, rank() over(partition by username order by startdate desc) as rk, count(*) over(partition by username) as cnt
+from useractivity
+)
+
+select username, activity, startdate, enddate
+from cte
+where rk = 2 or cnt = 1
+;
+```
