@@ -1774,3 +1774,391 @@ from cte
 where rk = 2 or cnt = 1
 ;
 ```
+
+**[1378. Replace Employee ID w/ The Unique Identifier](https://zhuanlan.zhihu.com/p/264098908)** 
+
+id is the primary key for this table. Each row of this table contains the id and the name of an employee in a company.
+
+employees: id | name
+
+(id, unique_id) is the primary key for this table. Each row of this table contains the id and the corresponding unique id of an employee in the company.
+
+employeeuni: id | unique_id
+
+Write an SQL query to show the unique ID of each user, If a user doesn't have a unique ID replace just show null.
+
+Return the result table in any order.
+
+```
+select eu.unique_id, e.name
+from employees e left join employeeuni eu
+on e.id = eu.id
+;
+```
+
+**[1384. Total Sales Amount by Year](https://zhuanlan.zhihu.com/p/264682596)** 
+
+product_id is the primary key for this table. product_name is the name of the product.
+
+product: product_id | product_name
+
+product_id is the primary key for this table. 
+period_start and period_end indicates the start and end date for sales period, both dates are inclusive.
+The average_daily_sales column holds the average daily sales amount of the items for the period.
+
+sales: product_id | period_start | period_end | average_daily_sales
+
+Write an SQL query to report the Total sales amount of each item for each year, with corresponding product name, product_id and report_year.
+
+Dates of the sales years are between 2018 to 2020. Return the result table ordered by product_id and report_year.
+
+```
+# for each period get the days for each year
+# multiply days by avg_sales
+
+with cte as (
+select s.product_id, p.product_name,
+(case when year(s.period_start) = 2018 and year(s.period_end) = 2018 then datediff(s.period_end, s.period_start) + 1 
+when year(s.period_start) = 2018 and year(s.period_end) in (2019, 2020) then datediff('2018-12-31', s.period_start) + 1
+else 0 end) * s.average_daily_sales  as total_2018,
+(case when year(s.period_start) = 2018 and year(s.period_end) = 2019 then datediff(s.period_end, '2019-01-01') + 1
+when year(s.period_start) = 2018 and year(s.period_end) = 2020 then datediff('2019-01-01', '2019-12-31') + 1
+when year(s.period_start) = 2019 and year(s.period_end) = 2019 then datediff(s.period_end, s.period_start) + 1
+when year(s.period_start) = 2019 and year(s.period_end) = 2020 then datediff('2019-12-31', s.period_start) + 1
+else 0 end) * s.average_daily_sales as total_2019,
+(case when year(s.period_start) = 2018 and year(s.period_end) = 2020 then datediff(s.period_end, '2020-01-01') + 1
+when year(s.period_start) = 2019 and year(s.period_end) = 2020 then datediff(s.period_end, '2020-01-01') + 1
+when year(s.period_start) = 2020 and year(s.period_end) = 2020 then datediff(s.period_end, s.period_start) + 1
+else 0 end) * s.average_daily_sales as total_2020
+from sales s left join product p on s.product_id = p.product_id
+)
+
+select *
+from (
+select product_id, prodct_name, 2018 as report_year, total_2018 as total_amount
+from cte
+where total_2018 <> 0
+union
+select product_id, prodct_name, 2019 as report_year, total_2019 as total_amount
+from cte
+where total_2019 <> 0
+union
+select product_id, prodct_name, 2020 as report_year, total_2020 as total_amount
+from cte
+where total_2020 <> 0
+) tmp
+order by product_id, report_year
+;
+
+# solution from Zhihu: save each year's data first and then union
+with cte as
+(
+select product_id, average_daily_sales, '2018' as report_year,
+case when period_start < '2019-01-01' and period_end < '2019-01-01' then datediff(period_end, period_start) + 1
+when period_start < '2019-01-01' and period_end >= '2019-01-01' then datediff('2018-12-31', period_start) + 1
+else 0 end as days_in_year
+from sales
+
+union
+# using year in condition seems to be easier
+select product_id, average_daily_sales, '2019' as report_year,
+case when period_start < '2019-01-01' and period_end >= '2019-01-01' and period_end < '2020-01-01' then datediff(period_end, '2019-01-01') + 1
+when period_start < '2019-01-01' and period_end >= '2020-01-01' then datediff('2019-12-31', '2019-01-01') + 1
+when period_start >= '2019-01-01' and period_start < '2020-01-01' and period_end >= '2019-01-01' and period_end < '2020-01-01' then datediff(period_end, period_start) + 1
+when period_start >= '2019-01-01' and period_start < '2020-01-01' and period_end >= '2020-01-01' then datediff('2019-12-31', period_start) + 1
+else 0 end as days_in_year
+from sales
+
+union
+
+select product_id, average_daily_sales, '2020' as report_year,
+case when period_start < '2020-01-01' and period_end >= '2020-01-01' then datediff(period_end, '2020-01-01') + 1
+when period_start >= '2020-01-01' then datediff(period_end, period_start) + 1
+else 0 end as days_in_year
+from sales
+
+select cte.product_id,
+p.product_name,
+cte.report_year,
+cte.days_in_year * cte.average_daily_sales as total_amount
+from cte left join product p
+on cte.product_id = p.product_id
+where cte.days_in_year > 0
+order by 1, 3
+;
+
+```
+
+**[1393. Capital Gain/Loss](https://zhuanlan.zhihu.com/p/264699829)** 
+
+(stock_name, operation_day) is the primary key for this table.
+The operation column is an ENUM of type ('Sell', 'Buy')
+Each row of this table indicates that the stock which has stock_name had an operation on the day operation_day with the price.
+It is guaranteed that each 'Sell' operation for a stock has a corresponding 'Buy' operation in a previous day.
+
+stocks: stock_name | operation | operation_day | price
+
+Write an SQL query to report the Capital gain/loss for each stock.
+
+The capital gain/loss of a stock is total gain or loss after buying and selling the stock one or many times.
+
+Return the result table in any order.
+
+```
+# partition by stock, buy then sell
+# even number is sell
+with cte as
+(
+select stock_name, price, lag(price,1) over(partition by stock_name order by operation_day) as buy_price, row_number() over(partition by stock_name order by operation_day) as rown
+from stocks
+)
+
+select stock_name, sum(price - buy_price) as capital_gain_loss
+from cte
+where rown%2 = 0
+group by 1
+;
+
+# in fact, no need to be so complex
+
+select stock_name,
+sum(case when operation = 'buy' then (-1) * price else price end) as capital_gain_loss
+from stocks
+group by 1
+;
+```
+
+**[1398. Customers Who Bought Product A & B but Not C](https://zhuanlan.zhihu.com/p/264755177)** 
+
+customer_id is the primary key for this table. customer_name is the name of the customer.
+
+customers: customer_id | customer_name
+
+order_id is the primary key for this table. customer_id is the id of the customer who bought the product "product_name".
+
+orders: order_id | customer_id | product_name
+
+Write an SQL query to report the customer_id and customer_name of customers who bought products "A", "B" but did not buy the product "C" since we want to recommend them buy this product.
+
+Return the result table ordered by customer_id.
+
+```
+select customer_id, customer_name
+from customers 
+where customer_id in (select distinct customer_id where product_name = 'A')
+and customer_id in (select distinct customer_id where product_name = 'B') # both A and B rather than either A or B
+and customer_id not in (select distinct customer_id where product_name = 'C')
+order by 1
+;
+```
+
+**[1407. Top Travellers](https://zhuanlan.zhihu.com/p/264757140)** 
+
+id is the primary key for this table. name is the name of the user.
+
+users: id | name
+
+id is the primary key for this table. user_id is the id of the user who travelled the distance "distance".
+
+rides: id | user_id | distance
+
+Write an SQL query to report the distance travelled by each user.
+
+Return the result table ordered by travelled_distance in descending order, if two or more users travelled the same distance, order them by their name in ascending order.
+
+```
+select u.name, sum(ifnull(r.distance,0)) as travelled_distance
+from users u left join rides r
+on u.id= r.user_id
+group by 1
+order by 2 desc, 1
+;
+```
+
+**[1412. Find the Quiet Students in All Exams](https://zhuanlan.zhihu.com/p/264759535)** 
+
+student_id is the primary key for this table. student_name is the name of the student.
+
+students: student_id | student_name
+
+(exam_id, student_id) is the primary key for this table. Student with student_id got score points in exam with id exam_id.
+
+exam: exam_id | student_id | score
+
+A "quite" student is the one who took at least one exam and didn't score neither the high score nor the low score.
+
+Write an SQL query to report the students (student_id, student_name) being "quiet" in ALL exams.
+
+Don't return the student who has never taken any exam. Return the result table ordered by student_id.
+
+```
+with cte as (
+select student_id, 
+row_number() over(partition by exam_id order by score desc) as rk_desc,
+row_number() over(partition by exam_id order by score) as rk_asc
+from exam
+)
+
+select distinct cte.student_id, s.student_name
+from cte join students s
+on cte.student_id = s.student_id
+where cte.student_id not in (select student_id from cte where rk_desc = 1) and
+cte.student_id not in (select student_id from cte where rk_asc = 1)
+;
+```
+
+**[1421. NPV Queries](https://zhuanlan.zhihu.com/p/264760535)** 
+
+(id, year) is the primary key of this table.
+The table has information about the id and the year of each inventory and the corresponding net present value.
+
+npv: id | year | npv
+
+(id, year) is the primary key of this table. The table has information about the id and the year of each inventory query.
+
+queries: id | year
+
+Write an SQL query to find the npv of all each query of queries table.
+
+Return the result table in any order.
+
+```
+select q.id, q.year, ifnull(n.npv,0)
+from queries q left join npv n
+on q.id = n.id and q.year = n.year
+;
+```
+ 
+ 
+**[1435. Create a Session Bar Chart](https://zhuanlan.zhihu.com/p/264761535)** 
+
+session_id is the primary key for this table. duration is the time in seconds that a user has visited the application.
+
+sessions: session_id | duration
+
+You want to know how long a user visits your application. You decided to create bins of "[0-5>", "[5-10>", "[10-15>" and "15 minutes or more" and count the number of sessions on it.
+
+Write an SQL query to report the (bin, total) in any order.
+
+```
+with full_list as
+(select '[0-5>' as bin
+union
+select '[5-10>' as bin
+union
+select '[10-15>' as bin
+union
+select '15 or more' as bin
+),
+cte as
+(
+select session_id,
+case when duration >= 0 and duration < 300 then '[0-5>'
+when duration >= 300 and duration < 600 then '[5-10>'
+when duration >= 600 and duration < 900 then '[10-15>'
+when duration >= 900 then '15 or more'
+else 'error' end as bin
+from sessions
+)
+
+select f.bin, ifnull(count(cte.session_id),0) as total
+from full_list f left join cte
+on f.bin = cte.bin
+group by 1 # never forget group by after aggregation
+order by 1
+;
+```
+
+
+**[1440. Evaluate Boolean Expression](https://zhuanlan.zhihu.com/p/264773950)** 
+
+name is the primary key for this table. This table contains the stored variables and their values.
+
+variables: name | value
+
+(left_operand, operator, right_operand) is the primary key for this table.
+This table contains a boolean expression that should be evaluated.
+operator is an enum that takes one of the values ('<', '>', '=')
+The values of left_operand and right_operand are guaranteed to be in the Variables table.
+
+expressions: left_operand | operator | right_operand
+
+Write an SQL query to evaluate the boolean expressions in Expressions table.
+
+Return the result table in any order.
+
+```
+select e.*,
+case when operator = '<' and lv.value < rv.value then 'true'
+when operator = '=' and lv.value = rv.value then 'true'
+when operator = '>' and lv.value > rv.value then 'true'
+else 'false' end as value
+from expressions e left join variables lv on e.left_operand = lv.name
+left join variables rv on e.right_operand = rv.name
+;
+```
+
+
+**[1445. Apples & Oranges](https://zhuanlan.zhihu.com/p/264788183)** 
+
+(sale_date,fruit) is the primary key for this table.
+This table contains the sales of "apples" and "oranges" sold each day.
+
+sales: sale_date | fruit | sold_num
+
+Write an SQL query to report the difference between number of apples and oranges sold each day.
+
+Return the result table ordered by sale_date in format ('YYYY-MM-DD').
+
+```
+select sa.sale_date, ifnull(sa.sold_num - so.sold_num,0) as diff
+from sales sa join sales so on sa.sale_date = so.sale_date
+where sa.fruit = 'apples' and so.fruit = 'oranges'
+order by 1
+;
+```
+
+**[1454. Active Users](https://zhuanlan.zhihu.com/p/264788183)** 
+
+the id is the primary key for this table.
+This table contains the account id and the user name of each account.
+
+accounts: id | name
+
+There is no primary key for this table, it may contain duplicates.
+This table contains the account id of the user who logged in and the login date. A user may log in multiple times in the day.
+
+logins: id | login_date
+
+Write an SQL query to find the id and the name of active users.
+
+Active users are those who logged in to their accounts for 5 or more consecutive days.
+
+Return the result table ordered by the id.
+
+```
+select tmp.id, a.name
+from (select distinct id, login_date from logins) tmp
+join accounts a on tmp.id = a.id
+group by tmp.id, a.name, dayofyear(tmp.login_date) - rank() over(partition by tmp.id order by tmp.login_date)
+having count(tmp.id) >= 5
+;
+```
+
+
+**[1459. Rectangles Area](https://zhuanlan.zhihu.com/p/264791928)** 
+
+id is the primary key for this table. Each point is represented as a 2D Dimensional (x_value, y_value).
+
+points: id | x_value | y_value
+
+Write an SQL query to report of all possible rectangles which can be formed by any two points of the table.
+
+Each row in the result contains three columns (p1, p2, area) where:
+
+p1 and p2 are the id of two opposite corners of a rectangle and p1 < p2.
+Area of this rectangle is represented by the column area.
+
+```
+
+```
