@@ -2160,5 +2160,208 @@ p1 and p2 are the id of two opposite corners of a rectangle and p1 < p2.
 Area of this rectangle is represented by the column area.
 
 ```
+select p1.id as p1, p2.id as p2, abs(p2.x_value-p1.x_value)*abs(p2.y_value-p1.y_value) as area
+from points p1 join points p2 on p1.id < p2.id and p1.x_value <> p2.x_value and p1.y_value <> p2.y_value
+order by area desc, p1, p2
+;
+
+```
+
+
+**[1468. Calculate Salaries](https://zhuanlan.zhihu.com/p/264795276)** 
+
+(company_id, employee_id) is the primary key for this table.
+This table contains the company id, the id, the name and the salary for an employee.
+
+salaries: company_id | employee_id | employee_name | salary
+
+Write an SQL query to find the salaries of the employees after applying taxes.
+
+The tax rate is calculated for each company based on the following criteria:
+
+0% If the max salary of any employee in the company is less than 1000$.
+24% If the max salary of any employee in the company is in the range [1000, 10000] inclusive.
+49% If the max salary of any employee in the company is greater than 10000$.
+Return the result table in any order. Round the salary to the nearest integer.
+
+The query result format is in the following example:
+
+```
+# Please understand the problem statement correctly
+with rate as
+(
+select compan_id,
+case when max(salary) < 1000 then 0 when max(salary)>= 1000 and max(salary) <= 10000 then 0.24 else 0.49 end as rate
+from salaries
+group by 1
+)
+
+select s.company_id, s.employee_id, s.employee_name, round(s.salary * (1 - r.rate), 0) as salary
+from salaries s left join rate r on s.company_id = r.company_id
+;
+
+```
+
+
+**[1479. Sales by Day of the Week](https://zhuanlan.zhihu.com/p/264966908)** 
+
+(ordered_id, item_id) is the primary key for this table. This table contains information of the orders placed. order_date is the date when item_id was ordered by the customer with id customer_id.
+
+orders: order_id | customer_id | order_date | item_id | quantity
+
+item_id is the primary key for this table. item_name is the name of the item. item_category is the category of the item.
+
+items: item_id | item_name | item_category
+
+You are the business owner and would like to obtain a sales report for category items and day of the week.
+
+Write an SQL query to report how many units in each category have been ordered on each day of the week.
+
+Return the result table ordered by category.
+
+```
+select i.item_category, 
+sum(case when dayofweek(o.order_date) = 2 then ifnull(o.quantity,0) else 0 end) as 'Monday',
+sum(case when dayofweek(o.order_date) = 3 then ifnull(o.quantity,0) else 0 end) as 'Tuesday',
+sum(case when dayofweek(o.order_date) = 4 then ifnull(o.quantity,0) else 0 end) as 'Wednesday',
+sum(case when dayofweek(o.order_date) = 5 then ifnull(o.quantity,0) else 0 end) as 'Thursday',
+sum(case when dayofweek(o.order_date) = 6 then ifnull(o.quantity,0) else 0 end) as 'Friday',
+sum(case when dayofweek(o.order_date) = 7 then ifnull(o.quantity,0) else 0 end) as 'Saturday',
+sum(case when dayofweek(o.order_date) = 1 then ifnull(o.quantity,0) else 0 end) as 'Sunday'
+# o.order_id, o.customer_id, dayofweek(o.order_date) as day, o.item_id, o.quantity, 
+from orders o right join items i on o.item_id = i.item_id
+group by 1
+order by 1
+;
+
+```
+
+
+**[1484. Group Sold Products By The Date](https://zhuanlan.zhihu.com/p/264969726)** 
+
+activities: sell_date | product
+
+Write an SQL query to find for each date, the number of distinct products sold and their names.
+
+The sold-products names for each date should be sorted lexicographically.
+
+Return the result table ordered by sell_date.
+
+```
+select sell_date, count(distinct product) as num_sold, group_concat(distinct product order by product) as products
+from activities
+group by 1
+order by 1
+;
+
+```
+
+
+**[1495. Friendly Movies Streamed Last Month](https://zhuanlan.zhihu.com/p/264971119)** 
+
+(program_date, content_id) is the primary key for this table. This table contains information of the programs on the TV. content_id is the id of the program on some channels on the TV.
+
+tvprogram: program_date | content_id | channel
+
+content_id is the primary key for this table.
+Kids_content is an enum that takes one of the values ('Y', 'N') where:
+'Y' means is content for kids otherwise 'N' is not content for kids.
+content_type is the category of the content as movies, series, etc.
+
+content: content_id | title | kids_content | content_type
+
+Write an SQL query to report the distinct titles of the kid-friendly movies streamed in June 2020.
+
+Return the result table in any order.
+
+```
+select distinct c.title
+from tvprograms tv join content c
+on tv.content_id = c.content_id
+where left(tv.program_date, 7) = '2020-06' and kids_content = 'Y' and content_type = 'Movies'
+;
+
+```
+
+
+**[1501. Countries You Can Safely Invest In](https://zhuanlan.zhihu.com/p/264973193)** 
+
+id is the primary key for this table.
+Each row of this table contains the name of a person and their phone number.
+Phone number will be in the form 'xxx-yyyyyyy' where xxx is the country code (3 characters) and yyyyyyy is the phone number (7 characters) where x and y are digits. Both can contain leading zeros.
+
+person: id | name | phone_number
+
+country_code is the primary key for this table.
+Each row of this table contains the country name and its code. country_code will be in the form 'xxx' where x is digits.
+
+country: name | country_code
+
+There is no primary key for this table, it may contain duplicates.
+Each row of this table contains the caller id, callee id and the duration of the call in minutes. caller_id != callee_id
+
+calls: caller_id | callee_id | duration
+
+A telecommunications company wants to invest in new countries. The company intends to invest in the countries where the average call duration of the calls in this country is strictly greater than the global average call duration.
+
+Write an SQL query to find the countries where this company can invest.
+
+Return the result table in any order.
+
+```
+select distinct name as country
+from
+(
+select c.name, avg(cl.duration) over(partition by c.name) as avg_by_country, avg(cl.duration) over() as avg_by_world
+from person p left join country c on left(p.number, 3) = c.country_code
+left join calls cl on p.id = cl.caller_id or p.id = cl.callee_id
+) tmp
+where avg_by_country > avg_by_world
+;
+
+# method2?
+select c.name as country, avg(cl.duration) over(partition by c.name) as avg_by_country, avg(cl.duration) over() as avg_by_world
+from person p left join country c on left(p.number, 3) = c.country_code
+left join calls cl on p.id = cl.caller_id or p.id = cl.callee_id
+group by 1
+having avg(cl.duration) > (select avg(duration) from calls)
+;
+
+```
+
+
+**[1511. Customer Order Frequency](https://zhuanlan.zhihu.com/p/264975229)** 
+
+customer_id is the primary key for this table. This table contains information of the customers in the company.
+
+customers: customer_id | name | country
+
+product_id is the primary key for this table. This table contains information of the products in the company. price is the product cost.
+
+product: product_id | description | price
+
+order_id is the primary key for this table. This table contains information on customer orders. customer_id is the id of the customer who bought "quantity" products with id "product_id". Order_date is the date in format ('YYYY-MM-DD') when the order was shipped.
+
+orders: order_id | customer_id | product_id | order_Date | quantity
+
+Write an SQL query to report the customer_id and customer_name of customers who have spent at least $100 in each month of June and July 2020.
+
+Return the result table in any order.
+
+```
+# spending in june and july
+# filter
+
+# not sure whether correct or not
+
+select c.customer_id, c.name
+from orders o left join customers c on o.customer_id = c.customer_id 
+left join product p on o.product_id = p.product_id
+group by 1, 2
+having 
+sum( case when left(o.order_date, 7) = '2020-06' then o.quantity * p.price else 0 end ) >= 100
+and
+sum( case when left(o.order_date, 7) = '2020-07' then o.quantity * p.price else 0 end ) >= 100
+;
 
 ```
