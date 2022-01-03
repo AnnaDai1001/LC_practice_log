@@ -2365,3 +2365,107 @@ sum( case when left(o.order_date, 7) = '2020-07' then o.quantity * p.price else 
 ;
 
 ```
+
+**[1517. Find Users With Valid E-Mails](https://zhuanlan.zhihu.com/p/265016951)** 
+
+users: user_id | name | mail
+
+Write an SQL query to find the users who have valid emails.
+
+A valid e-mail has a prefix name and a domain where:
+
+The prefix name is a string that may contain letters (upper or lower case), digits, underscore '_', period '.' and/or dash '-'. The prefix name must start with a letter.
+The domain is '@leetcode.com'.
+Return the result table in any order.
+
+```
+select *
+from users
+where mail like '^[a-z][a-z0-9_.-]*@leetcode.com$'
+;
+
+```
+
+**[1527. Patients With a Condition](https://zhuanlan.zhihu.com/p/265020162)** 
+
+patient_id is the primary key for this table.
+'conditions' contains 0 or more code separated by spaces.
+This table contains information of the patients in the hospital.
+
+patients: patient_id | patient_name | conditions
+
+Write an SQL query to report the patient_id, patient_name all conditions of patients who have Type I Diabetes. Type I Diabetes always starts with DIAB1 prefix
+
+Return the result table in any order.
+
+```
+select *
+from patients
+where conditions like '%DIAB1%'
+;
+
+```
+
+**[1532. The Most Recent Three Orders](https://zhuanlan.zhihu.com/p/265024802)** 
+
+customer_id is the primary key for this table. This table contains information about customers.
+
+customers: customer_id | name
+
+order_id is the primary key for this table.
+This table contains information about the orders made by customer_id.
+Each customer has one order per day.
+
+orders: order_id | order_date | customer_id | cost
+
+Write an SQL query to find the most recent 3 orders of each user. If a user ordered less than 3 orders return all of their orders.
+
+Return the result table sorted by customer_name in ascending order and in case of a tie by the customer_id in ascending order. If there still a tie, order them by the order_date in descending order.
+
+```
+with ordered as
+(
+select *, rank() over(partition by customer_id order by order_date desc) as rk
+from orders
+)
+
+select c.name as customer_name, c.customer_id, o.order_id, o.order_date
+from customers c right join ordered o
+on c.customer_id = o.customer_id
+where rk <= 3
+order by 1, 2, 4 desc
+;
+
+```
+
+
+**[1543. Fix Product Name Format](https://zhuanlan.zhihu.com/p/265032315)** 
+
+sale_id is the primary key for this table.
+Each row of this table contains the product name and the date it was sold.
+
+sales: sale_id | product_name | sale_date
+
+order_id is the primary key for this table.
+This table contains information about the orders made by customer_id.
+Each customer has one order per day.
+
+orders: order_id | order_date | customer_id | cost
+
+Since table Sales was filled manually in the year 2000, product_name may contain leading and/or trailing white spaces, also they are case-insensitive.
+
+Write an SQL query to report
+
+product_name in lowercase without leading or trailing white spaces.
+sale_date in the format 'YYYY-MM'
+total：the number of times the product was sold in this month.
+Return the result table ordered by product_name in ascending order, in case of a tie order it by sale_date in ascending order.
+
+```
+select lower(trim(product_name)), left(sale_date,7), count(order_id) as total
+from sales
+group by lower(trim(product_name)), left(sale_date,7)
+order by product_name, sale_date
+;
+
+```
