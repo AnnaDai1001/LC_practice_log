@@ -2469,3 +2469,317 @@ order by product_name, sale_date
 ;
 
 ```
+
+**[1549. The Most Recent Orders for Each Product](https://zhuanlan.zhihu.com/p/265036640)** 
+
+customer_id is the primary key for this table. This table contains information about the customers.
+
+customers: customer_id | name
+
+order_id is the primary key for this table. This table contains information about the orders made by customer_id. There will be no product ordered by the same user more than once in one day.
+
+orders: order_id | order_date | customer_id | product_id
+
+product_id is the primary key for this table. This table contains information about the Products.
+
+products: product_id | product_name | price
+
+Write an SQL query to find the most recent order(s) of each product.
+
+Return the result table sorted by product_name in ascending order and in case of a tie by the product_id in ascending order. If there still a tie, order them by the order_id in ascending order.
+
+```
+select p.product_name, tmp.product_id, tmp.order_id, tmp.order_date
+from products p join
+(select *, rank() over(partition by product_id order by order_date desc) as rk
+from orders) tmp
+on p.product_id = tmp.product_id
+where tmp.rk = 1
+order by p.product_name, tmp.product_id, tmp.order_id
+;
+
+```
+
+**[1555. Bank Account Summary](https://zhuanlan.zhihu.com/p/265043876)** 
+
+user_id is the primary key for this table. Each row of this table contains the current credit information for each user.
+
+users: user_id | user_name | credit
+
+trans_id is the primary key for this table. Each row of this table contains the information about the transaction in the bank. User with id (paid_by) transfer money to user with id (paid_to).
+
+transactions: trans_id | paid_by | paid_to | amount | transacted_on
+
+Leetcode Bank (LCB) helps its coders in making virtual payments. Our bank records all transactions in the table Transaction, we want to find out the current balance of all users and check wheter they have breached their credit limit (If their current credit is less than 0).
+
+Write an SQL query to report.
+
+user_id
+user_name
+credit, current balance after performing transactions.
+credit_limit_breached, check credit_limit ("Yes" or "No")
+Return the result table in any order.
+
+```
+with cte as
+(
+select *, pb.amount as paid, pt.amount as received
+from users u 
+left join transactions pb on u.user_id = pb.paid_by
+left join transactions pt on u.user_id = pt.paid_to
+)
+
+select user_id, user_name, max(credit) - sum(paid) + sum(received) as credit,
+case when max(credit) - sum(paid) + sum(received) >= 0 then 'No' else 'Yes' end as credit_limit_breached
+from cte
+group by user_id, user_name
+;
+
+# method from zhihu
+with cte as
+(select paid_by as user, -1 * amount as amount
+from transactions
+union all
+select paid_to as user,  amount
+from transactions),
+cte1 as
+(
+select user, sum(amount) as total
+from cte
+group by 1
+),
+cte2 as (
+select u.user_id, u.user_name, u.credit + ifnull(cte1.amount,0) as credit
+from users u left join cte1 on u.user_id = cte1.user
+)
+
+select user_id, user_name, credit, 
+case when credit >= 0 then 'No' else 'Yes' end as credit_limit_breached
+from cte2
+```
+
+**[1565. Unique Orders and Customers Per Month](https://zhuanlan.zhihu.com/p/265045765)** 
+
+order_id is the primary key for this table.
+This table contains information about the orders made by customer_id.
+
+orders: order_id | order_date | customer_id | invoice
+
+Write an SQL query to find the number of unique orders and the number of unique customers with invoices > $20 for each different month.
+
+Return the result table sorted in any order.
+
+```
+select left(order_date, 7) as month, count(distinct order_id) as order_count, count(distinct customer_id) as customer_count
+from orders
+where invoice > 20
+group by left(order_date, 7) 
+;
+
+```
+**[1571. Warehouse Manager](https://zhuanlan.zhihu.com/p/265047182)** 
+
+(name, product_id) is the primary key for this table. Each row of this table contains the information of the products in each warehouse.
+
+warehouse: name | product_id | units
+
+product_id is the primary key for this table.
+Each row of this table contains the information about the product dimensions (Width, Lenght and Height) in feets of each product.
+
+products: product_id | product_name | width | length | height
+
+Write an SQL query to report, How much cubic feet of volume does the inventory occupy in each warehouse.
+
+warehouse_name
+volume
+Return the result table in any order.
+
+```
+select w.name, ifnull(sum(p.width * p.length * p.height * w.units), 0) as volume # don't forget units
+from warehouse w left join products p
+on w.product_id = p.product_id
+group by w.name
+;
+
+```
+
+**[1581. Customer Visited but Not Made Transactions](https://zhuanlan.zhihu.com/p/265217203)** 
+
+visit_id is the primary key for this table. This table contains information about the customers who visited the mall.
+
+visits: visit_id | customer_id
+
+transaction_id is the primary key for this table. This table contains information about the transactions made during the visit_id.
+
+transactions:  transaction_id | visit_id | amount
+
+Write an SQL query to find the IDs of the users who visited without making any transactions and the number of times they made these types of visits.
+
+Return the result table sorted in any order.
+
+```
+select customer_id, count(visit_id) as count_no_trans
+from visits
+where visit_id not in (select distinct visit_id from transactions)
+group by 1
+;
+
+```
+
+
+**[1587. Bank Account Summary II](https://zhuanlan.zhihu.com/p/265220402)** 
+
+account is the primary key for this table.
+Each row of this table contains the account number of each user in the bank.
+
+users: account | name
+
+trans_id is the primary key for this table. Each row of this table contains all changes made to all accounts. amount is positive if the user received money and negative if they transferred money.
+All accounts start with a balance 0.
+
+transactions: trans_id | account | amount | transacted_on
+
+Write an SQL query to report the name and balance of users with a balance higher than 10000. The balance of an account is equal to the sum of the amounts of all transactions involving that account.
+
+Return the result table in any order.
+
+```
+select u.name, sum(t.amount) as balance
+from users u join transactions t on u.account = t.account
+group by u.name
+having sum(t.amount) > 10000
+;
+
+```
+
+
+**[1596. Most Frequent Products of Each Customer](https://zhuanlan.zhihu.com/p/265222438)** 
+
+customer_id is the primary key for this table. This table contains information about the customers.
+
+customers: customer_id | name
+
+order_id is the primary key for this table. This table contains information about the orders made by customer_id. No customer will order the same product more than once in a single day.
+
+orders: order_id | order_date | customer_id | product_id
+
+product_id is the primary key for this table. This table contains information about the products.
+
+products: product_id | product_name | price
+
+Write an SQL query to find the most frequently ordered product(s) for each customer.
+
+The result table should have the product_id and product_name for each customer_id who ordered at least one order. Return the result table in any order.
+
+```
+with cte as
+(
+select customer_id, product_id, count(order_id) as cnt
+from orders
+group by 1,2
+),
+cte1 as
+(
+select *, rank() over(partition by customer_id order by cnt desc) as rk
+from cte
+)
+
+select cte1.customer_id, cte1.product_id, p.product_name
+from cte1 left join products p
+on cte1.product_id = p.product_id
+where cte1.rk = 1
+;
+
+```
+
+
+**[1607. Sellers With No Sales](https://zhuanlan.zhihu.com/p/265222977)** 
+
+customer_id is the primary key for this table. Each row of this table contains the information of each customer in the WebStore.
+
+customer: customer_id | customer_name
+
+order_id is the primary key for this table.
+Each row of this table contains all orders made in the Webstore.
+sale_date is the date when the transaction was made between the customer (customer_id) and the seller (seller_id).
+
+orders: order_id | sale_date | order_cost | customer_id | seller_id
+
+seller_id is the primary key for this table. Each row of this table contains the information of each seller.
+
+seller: seller_id | seller_name
+
+Write an SQL query to report the names of all sellers who did not make any sales in 2020.
+
+Return the result table ordered by seller_name in ascending order.
+
+```
+select seller_name
+from seller
+where seller_id not in (select distinct seller_id from orders where left(sale_date, 4) = 2020 )
+order by 1
+;
+
+```
+
+**[1613. Find the Missing IDs](https://zhuanlan.zhihu.com/p/265223605)** 
+
+customer_id is the primary key for this table. Each row of this table contains the name and the id customer.
+
+customer: customer_id | customer_name
+
+Write an SQL query to find the missing customer IDs. The missing IDs are ones that are not in the Customers table but are in the range between 1 and the maximum customer_id present in the table.
+
+Notice that the maximum customer_id will not exceed 100.
+
+Return the result table ordered by ids in ascending order.
+
+```
+with RECURSIVE full_list as (
+select 1 as ids
+union
+select ids + 1
+from full_list
+where ids < (select max(customer_id) from customer)
+)
+
+select ids
+from full_list
+where ids not in (select distinct customer_id from customer)
+order by 1
+;
+
+```
+
+**[1623. Valid Triplets That Can Represent a Country](https://zhuanlan.zhihu.com/p/265222977)** 
+
+student_id is the primary key for this table. Each row of this table contains the name and the id of a student in school A. All student_name are distinct.
+
+schoola: student_id | student_name
+
+student_id is the primary key for this table. Each row of this table contains the name and the id of a student in school B. All student_name are distinct.
+
+schoolb: student_id | student_name
+
+student_id is the primary key for this table. Each row of this table contains the name and the id of a student in school C. All student_name are distinct.
+
+schoolc: student_id | student_name
+
+There is a country with three schools, where each student is enrolled in exactly one school. The country is joining a competition and wants to select one student from each school to represent the country such that:
+
+member_A is selected from SchoolA,
+member_B is selected from SchoolB,
+member_C is selected from SchoolC, and
+The selected students' names and IDs are pairwise distinct (i.e. no two students share the same name, and no two students share the same ID).
+Write an SQL query to find all the possible triplets representing the country under the given constraints.
+
+Return the result table in any order.
+
+```
+select a.student_name as member_A, b.student_name as member_B, c.student_name as member_C
+from schoola a join schoolb on a.student_id <> b.student_id and a.student_name <> b.student_name
+join schoolc c on a.student_id <> c.student_id and a.student_name <> c.student_name
+where b.student_id <> c.student_id and b.student_name <> c.student_name
+;
+
+```
