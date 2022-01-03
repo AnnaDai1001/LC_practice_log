@@ -1,4 +1,4 @@
-**[Original Post Here](https://zhuanlan.zhihu.com/p/249989779)** 
+**[Original Post Here](https://zhuanlan.zhihu.com/p/265354299)** 
 
 **[175. Combine Two Tables](https://zhuanlan.zhihu.com/p/249989779)** 
 
