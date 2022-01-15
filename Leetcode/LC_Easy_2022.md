@@ -97,47 +97,89 @@ where o.id is NULL
 ;
 ```
 
-**[175. Combine Two Tables](https://zhuanlan.zhihu.com/p/249989779)** 
+**[197. Rising Temperature](https://zhuanlan.zhihu.com/p/252403796)** 
 
-person: personid | firstname | lastname
+weather: id | recorddate | temperature
 
-address: addressid | personid | city | state
+Write an SQL query to find all dates' id with higher temperature compared to its previous dates (yesterday).
 
-Write a SQL query for a report that provides the following information for each person in the Person table, regardless if there is an address for each of those people:
-firstname, lastname, city, state
+Return the result table in any order.
 ```
-select p.firstname, p.lastname, a.city, a.state
-from person p left join address a
-on p.personid = a.personid
+select c.*
+from weather c left join weather p
+on datediff(c.recorddate, p.recorddate) = 1
+where c.temperature > p.temperature
+;
+
+# M2
+select id, recorddate, temperature
+from (select *, lag(temperature,1) over(order by recorddate) as p_temperature, lag(recorddate,1) over(order by recorddate) as p_recorddate
+from weather
+) tmp
+where datediff(recorddate, p_recorddate) = 1 # need to check consecutiveness of date as well
+and temperature > p_temperature
+
+```
+
+**[196. Delete Duplicate Emails](https://zhuanlan.zhihu.com/p/252243481)** 
+
+person: id | email
+
+Write a SQL query to delete all duplicate email entries in a table named Person, keeping only unique emails based on its smallest Id
+
+```
+delete from person
+where email in (select email from person group by email having count(id) > 1)
+;
+
+# leetcode solution
+delete p1 from person p1, person p2
+where p1.email = p2.email and p1.id > p2.id
+```
+
+**[511. Game Play Analysis I](https://zhuanlan.zhihu.com/p/254355214)** 
+
+(player_id, event_date) is the primary key of this table. This table shows the activity of players of some game. Each row is a record of a player who logged in and played a number of games (possibly 0) before logging out on some day using some device.
+
+activity: player_id | device_id | event_date | games_played
+
+Write an SQL query that reports the first login date for each player.
+
+```
+select player_id, min(event_date) as first_login
+from activity
+group by 1
+order by 1
 ;
 ```
 
-**[175. Combine Two Tables](https://zhuanlan.zhihu.com/p/249989779)** 
+**[512. Game Play Analysis II](https://zhuanlan.zhihu.com/p/254370126)** 
 
-person: personid | firstname | lastname
+(player_id, event_date) is the primary key of this table. This table shows the activity of players of some game. Each row is a record of a player who logged in and played a number of games (possibly 0) before logging out on some day using some device.
 
-address: addressid | personid | city | state
+activity: player_id | device_id | event_date | games_played
 
-Write a SQL query for a report that provides the following information for each person in the Person table, regardless if there is an address for each of those people:
-firstname, lastname, city, state
+Write a SQL query that reports the device that is first logged in for each player.
+
 ```
-select p.firstname, p.lastname, a.city, a.state
-from person p left join address a
-on p.personid = a.personid
+select player_id, device_id
+from (select *, rank() over(partition by player_id order by event_date) as rk
+from activity) tmp
+where rk = 1
 ;
 ```
 
-**[175. Combine Two Tables](https://zhuanlan.zhihu.com/p/249989779)** 
+**[577. Employee Bonus](https://zhuanlan.zhihu.com/p/258318063)** 
 
-person: personid | firstname | lastname
+employee: empid | name | supervisor | salary
 
-address: addressid | personid | city | state
+bonus: empid | bonus
 
-Write a SQL query for a report that provides the following information for each person in the Person table, regardless if there is an address for each of those people:
-firstname, lastname, city, state
+Select all employee's name and bonus whose bonus is < 1000.
+
 ```
-select p.firstname, p.lastname, a.city, a.state
-from person p left join address a
-on p.personid = a.personid
+select e.name, b.bonus
+from employee e left join bonus b on e.empid = b.empid
+where b.bonus < 1000 or b.bonus is null
 ;
 ```
