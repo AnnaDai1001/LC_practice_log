@@ -74,3 +74,37 @@ where c.num = n1.num and c.num = n2.num
 ;
 ```
 
+
+**[184. Department Highest Salary](https://zhuanlan.zhihu.com/p/252005967)** 
+
+employee: id | name | salary | departmentid
+
+department: id | name
+
+Write a SQL query to find employees who have the highest salary in each of the departments. For the above tables, your SQL query should return the following rows (order of rows does not matter).
+
+```
+select d.name as department, e.name as employee, e.salary
+from department d join
+(select *, rank() over(partition by departmentid order by salary desc) as rk
+from employee) e
+on d.id = e.departmentid
+where e.rk = 1
+;
+```
+
+
+**[534. Game Play Analysis III](https://zhuanlan.zhihu.com/p/254412551)** 
+
+(player_id, event_date) is the primary key of this table. This table shows the activity of players of some game. Each row is a record of a player who logged in and played a number of games (possibly 0) before logging out on some day using some device.
+
+activity: player_id | device_id | event_date | games_played
+
+Write an SQL query that reports for each player and date, how many games played so far by the player. That is, the total number of games played by the player until that date. Check the example for clarity.
+
+```
+select player_id, event_date, sum(games_played) over(partition by player_id order by event_date) as games_played_so_far
+from activity
+order by 1,2
+;
+```
