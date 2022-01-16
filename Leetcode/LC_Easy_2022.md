@@ -183,3 +183,107 @@ from employee e left join bonus b on e.empid = b.empid
 where b.bonus < 1000 or b.bonus is null
 ;
 ```
+
+**[584. Find Customer Referee](https://zhuanlan.zhihu.com/p/258694894)** 
+
+Given a table customer holding customers information and the referee.
+
+customer: id | name | referee_id
+
+Write a query to return the list of customers NOT referred by the person with id '2'.
+
+```
+select name
+from customer
+where referee_id is null or referee_id <> 2
+;
+```
+
+**[586. Customer Placing the Largest Number of Orders](https://zhuanlan.zhihu.com/p/258700620)** 
+
+orders: order_number (PK) | customer_number | order_date | required_date | shipped_date | status | comment
+
+Query the customer_number from the orders table for the customer who has placed the largest number of orders.
+
+It is guaranteed that exactly one customer will have placed more orders than any other customer.
+
+```
+select customer_number
+from orders
+group by 1
+order by count(order_number) desc
+limit 1
+;
+```
+
+
+**[596. Classes More Than 5 Students](https://zhuanlan.zhihu.com/p/258705251)** 
+
+There is a table courses with columns: student and class
+
+courses: student | class
+
+Please list out all classes which have more than or equal to 5 students.
+
+Note: The students should not be counted duplicate in each course.
+
+```
+select class
+from courses
+group by 1
+having count(distinct student) >= 5
+order by 1
+;
+```
+
+
+**[597. Friend Requests I: Overall Acceptance Rate](https://zhuanlan.zhihu.com/p/258790804)** 
+
+In social network like Facebook or Twitter, people send friend requests and accept others’ requests as well. Now given two tables as below:
+
+friend_request: sender_id | send_to_id | request_date
+
+request_accepted: requester_id | accepter_id | accept_date
+
+Write a query to find the overall acceptance rate of requests rounded to 2 decimals, which is the number of acceptance divides the number of requests.
+
+Note:
+
+The accepted requests are not necessarily from the table friend_request. In this case, you just need to simply count the total accepted requests (no matter whether they are in the original requests), and divide it by the number of requests to get the acceptance rate.
+It is possible that a sender sends multiple requests to the same receiver, and a request could be accepted more than once. In this case, the ‘duplicated’ requests or acceptances are only counted once.
+If there is no requests at all, you should return 0.00 as the accept_rate.
+
+For the sample data above, your query should return the following result.
+
+Explanation:There are 4 unique accepted requests, and there are 5 requests in total. So the rate is 0.80.
+
+```
+with tr as
+(
+select sender_id, send_to_id
+from friend_reqeust
+group by 1,2),
+ta as
+(
+select requester_id, accepter_id
+from request_accepted
+group by 1,2
+)
+
+select round(ifnull(count(ta.sender_id)/count(tr.requester_id), 0),2) as accept_rate
+from tr, ta
+;
+```
+
+**[597. Friend Requests I: Overall Acceptance Rate](https://zhuanlan.zhihu.com/p/258790804)** 
+
+Do the followup questions:
+1. accept rate of each month
+2. cumulative accept rate of each day
+
+```
+
+;
+```
+
+
