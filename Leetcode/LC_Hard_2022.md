@@ -72,3 +72,65 @@ where rk >= cnt/2 and rk <= cnt/2 + 1
 # where rk = round(cnt/2) or rk = round((cnt+1)/2)
 ;
 ```
+
+
+**[571. Find Median Given Frequency of Numbers](https://zhuanlan.zhihu.com/p/257945802)** 
+
+The Numbers table keeps the value of number and its frequency.
+
+numbers: number | frequency
+
+Write a query to find the median of all numbers and name the result as median. In this table, the numbers are 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 3, so the median is (0 + 0)/2 = 0.
+
+```
+# get the rank and count
+# med: odd -> (count+1)/2; even -> count/2 and count/2 + 1
+
+# my solution, not sure whether right or not
+with tmp1 as
+(select *, sum(frequency) over(order by number) as cum_cnt, sum(frequency) over() as tot_cnt
+from numbers)
+
+select avg(number) as median
+from tmp1
+where tot_cnt/2.0 between cum_cnt - frequency and cum_cnt
+;
+
+# 网友
+select avg(number) as median
+from
+(select *, sum(frequency) over(order by number) as cum_cnt, (sum(frequency) over())/2.0 as mid
+from numbers) tmp
+where mid between cum_cnt - frequency and cum_cnt
+;
+```
+
+**[579. Find Cumulative Salary of an Employee](https://zhuanlan.zhihu.com/p/258684985)** 
+
+The Employee table holds the salary information in a year.
+
+employee: id | month | salary
+
+Write a SQL to get the cumulative sum of an employee's salary over a period of 3 months but exclude the most recent month. The result should be displayed by 'Id' ascending, and then by 'Month' descending.
+
+```
+# the requirement is the rolling sum of three-month-window rather than a rolling sum
+# most important: understand the requirement
+
+select e1.id, e1.month,
+(ifnull(e1.salary, 0) + ifnull(e2.salary, 0) + ifnull(e3.salary, 0)) as salary
+from (
+select id, max(month) as maxm
+from employee
+group by 1
+having count(*) > 1
+) maxmonth
+left join employee e1
+on maxmonth.id = e1.id and maxmonth.maxm > e1.month
+left join employee e2
+on e1.id = e2.id and e2.month = e1.month - 1
+left join employee e3
+on e1.id = e3.id and e3.month = e1.month - 2
+order by 1, 2 desc
+;
+```
