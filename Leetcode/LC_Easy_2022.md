@@ -282,8 +282,74 @@ Do the followup questions:
 2. cumulative accept rate of each day
 
 ```
+# Q1
+with month_list as (
+select distinct month(request_date) as mnth
+from friend_request
+union
+select distinct month(accept_date) as mnth
+from request_accepted
+),
+request_by_month as (
+select month(request_date) as mnth, count(*) as cnt_request
+from (select request_date, sender_id, send_to_id from friend_request group by request_date, sender_id, send_to_id) t1
+group by 1
+),
+accepts_by_month as (
+select month(accept_date) as mnth, count(*) as cnt_accept
+from (select accept_date, requester_id, accepter_id from friend_request group by accept_date, requester_id, accepter_id) t2
+group by 1
+)
 
+select m.mnth, round(ifnull(a.cnt_accept/r.cnt_request,0),2)
+from month_list m
+left join request_by_month r
+on m.mnth = r.mnth
+left join accepts_by_month a
+on m.mnth = a.mnth
+group by 1
 ;
 ```
+
+
+```
+# Q2
+with date_list as (
+select distinct request_date as date
+from friend_request
+union
+select distinct accept_date as date
+from request_accepted
+),
+request_by_date as (
+select request_date as date, count(*) as cnt_request
+from (select request_date, sender_id, send_to_id from friend_request group by request_date, sender_id, send_to_id) t1
+group by 1
+),
+accepts_by_date as (
+select accept_date as date, count(*) as cnt_accept
+from (select accept_date, requester_id, accepter_id from friend_request group by accept_date, requester_id, accepter_id) t2
+group by 1
+),
+tmp as (
+select d.date, sum(ifnull(a.cnt_accept,0)) as cnt_accept, sum(ifnull(r.cnt_request,0)) as cnt_request
+from date_list d
+left join request_by_date r
+on d.date = r.date
+left join accepts_by_date a
+on d.date = a.date
+group by 1
+order by 1
+),
+tmp2 as (
+select date, sum(cnt_accept) over(order by date) as cum_accept, sum(cnt_request) over(order by date) as cum_request
+from tmp
+)
+
+select date, round(ifnull(cum_accept/cum_request,0),2) as cum_accept_rate
+from tmp2
+;
+```
+
 
 
