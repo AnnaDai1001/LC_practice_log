@@ -351,5 +351,65 @@ from tmp2
 ;
 ```
 
+**[603. Consecutive Available Seats](https://zhuanlan.zhihu.com/p/259420594)** 
+
+Several friends at a cinema ticket office would like to reserve consecutive available seats.
+
+cinema: seat_id | free
+
+Can you help to query all the consecutive available seats order by the seat_id using the following cinema table?
+
+The seat_id is an auto increment int, and free is bool ('1' means free, and '0' means occupied.).
+Consecutive available seats are more than 2(inclusive) seats consecutively available.
+
+```
+select distinct a.seat_id
+from cinema a join cinema b
+on abs(a.seat_id-b.seat_id)=1
+and a.free=1 and b.free =1
+order by 1
+
+# or use window function to get the lag and lead; then use or condition
+;
+
+**[607. Sales Person](https://zhuanlan.zhihu.com/p/259424830)** 
+
+The table salesperson holds the salesperson information. Every salesperson has a sales_id and a name.
+
+salesperson: sales_id | name | salary | commission_rate | hire_date
+
+The table company holds the company information. Every company has a com_id and a name.
+
+company: com_id | name | city
+
+The table orders holds the sales record information, salesperson and customer company are represented by sales_id and com_id.
+
+orders: order_id | order_date | com_id | sales_id | amount
+
+Output all the names in the table salesperson, who didn’t have sales to company 'RED'.
+
+```
+select name
+from salesperson
+where sales_id not in (
+select o.sales_id
+from orders o join company c
+on o.com_id = c.com_id
+where c.name = "RED"
+)
+;
+
+**[610. Triangle Judgement](https://zhuanlan.zhihu.com/p/259435481)** 
+
+A pupil Tim gets homework to identify whether three line segments could possibly form a triangle.
+
+However, this assignment is very heavy because there are hundreds of records to calculate.
+
+triangle: x | y | z
+
+```
+select *, case when abs(x-y)<z and abs(x-z)<y then "Yes" else "No" end as 'triangle'
+from triangle
+;
 
 
